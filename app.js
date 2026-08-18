@@ -16,7 +16,7 @@ const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2
 
 let settings = { mult: MULT_PUESTO };
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -66,6 +66,16 @@ function veredictoSugerido(s){
 }
 /* Arma el link de WhatsApp. Si el número empieza con "+" se respeta tal cual;
    si no, se asume Argentina: se limpia el 0 de área y el 15, y se antepone 549. */
+/* El país del proveedor no siempre coincide con el origen de la mercadería. */
+function paisDe(p){
+  if(p.paisProv) return p.paisProv;
+  const o = p.origen || "";
+  if(o.startsWith("Argentina")) return "Argentina";
+  if(PAISES.includes(o)) return o;
+  return "Otro";
+}
+function bandera(pais){ return BANDERAS[pais] || BANDERAS["Otro"]; }
+
 function waNumero(tel){
   if(!tel) return "";
   const crudo = String(tel).trim();
@@ -184,11 +194,12 @@ function vDashboard(){
 function vProductos(){
   let ps = state.productos.filter(p=>{
     const q = state.q.toLowerCase();
-    const hit = !q || [p.nombre,p.rubro,p.proveedor,p.notas,p.url,(p.tags||[]).join(" ")]
+    const hit = !q || [p.nombre,p.rubro,p.proveedor,p.notas,p.url,paisDe(p),(p.tags||[]).join(" ")]
       .join(" ").toLowerCase().includes(q);
     return hit
       && (!state.fRubro || p.rubro===state.fRubro)
-      && (!state.fVeredicto || p.veredicto===state.fVeredicto);
+      && (!state.fVeredicto || p.veredicto===state.fVeredicto)
+      && (!state.fPais || paisDe(p)===state.fPais);
   });
   const {k,dir} = state.sort;
   ps.sort((a,b)=>{
@@ -206,6 +217,7 @@ function vProductos(){
     <input class="input" id="q" placeholder="Buscar producto, proveedor, nota…" value="${esc(state.q)}">
     <select class="input" id="fRubro"><option value="">Todos los rubros</option>${opt(RUBROS,state.fRubro)}</select>
     <select class="input" id="fVeredicto"><option value="">Todos los estados</option>${opt(VEREDICTOS,state.fVeredicto)}</select>
+    <select class="input" id="fPais"><option value="">Todos los países</option>${PAISES.map(x=>`<option value="${esc(x)}" ${x===state.fPais?"selected":""}>${bandera(x)} ${esc(x)}</option>`).join("")}</select>
     <label class="input" style="display:flex;align-items:center;gap:7px;cursor:default">
       <span style="color:var(--tx3);font-size:12.5px;white-space:nowrap">Multiplicador ×</span>
       <input type="number" id="multDefault" step="0.05" min="1" value="${settings.mult}"
@@ -235,7 +247,8 @@ function vProductos(){
             <div class="psub">${(p.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></td>
         <td style="color:var(--tx2)">${esc(p.rubro||"—")}</td>
         <td>${p.provUrl?`<a href="${esc(p.provUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(p.proveedor||"link")}</a>`:esc(p.proveedor||"—")}
-            <div class="psub">${esc(p.origen||"")}</div></td>
+            <div class="psub"><span class="pais"><span class="bandera">${bandera(paisDe(p))}</span>${esc(paisDe(p))}</span>
+              ${p.origen && !p.origen.startsWith(paisDe(p)) ? `<span class="psub2">· llega de ${esc(p.origen)}</span>` : ""}</div></td>
         <td class="num">${money(p.venta)}</td>
         <td class="num" style="color:var(--tx2)">${money(costoPuesto(p))}${p.aplicaMult?`<span class="multmini">×${multDe(p)}</span>`:""}</td>
         <td class="num" style="color:${m==null?"var(--tx3)":m>=65?"var(--acc)":m>=45?"var(--warn)":"var(--bad)"}">${m==null?"—":m+"%"}</td>
@@ -286,10 +299,11 @@ function vProveedores(){
     <span class="hint">preguntá siempre: «¿me hacés factura A?» y «¿cuál es el mínimo?»</span></div>
   <div class="cardgrid">${PROVEEDORES.map(v=>`
     <div class="minicard">
-      <h3>${esc(v.nombre)}</h3>
-      <div class="meta">${esc(v.tipo)} · ${esc(v.pais)} · ${esc(v.rubro)}${usados[v.nombre]?` · <b style="color:var(--acc)">${usados[v.nombre]} producto${usados[v.nombre]===1?"":"s"}</b>`:""}</div>
+      <h3><span class="bandera bandera-lg">${bandera(v.pais)}</span>${esc(v.nombre)}</h3>
+      <div class="meta">${esc(v.tipo)} · <b style="color:${v.pais==="Argentina"?"var(--acc)":"var(--warn)"}">${esc(v.pais)}</b> · ${esc(v.rubro)}${usados[v.nombre]?` · <b style="color:var(--acc)">${usados[v.nombre]} producto${usados[v.nombre]===1?"":"s"}</b>`:""}</div>
       <p>${esc(v.nota)}</p>
-      <p style="margin-top:9px"><a href="${esc(v.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a></p>
+      <p style="margin-top:9px"><a href="${esc(v.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a>
+        ${v.whatsapp?` · <a href="https://wa.me/${waNumero(v.whatsapp)}" target="_blank" rel="noopener">WhatsApp ↗</a>`:""}</p>
     </div>`).join("")}</div>`;
 }
 
@@ -341,6 +355,7 @@ function render(){
     q.oninput = e=>{ state.q=e.target.value; render(); q.focus(); q.setSelectionRange(q.value.length,q.value.length); };
     $("#fRubro").onchange     = e=>{ state.fRubro=e.target.value; render(); };
     $("#fVeredicto").onchange = e=>{ state.fVeredicto=e.target.value; render(); };
+    $("#fPais").onchange      = e=>{ state.fPais=e.target.value; render(); };
     $("#multDefault").onchange = e=>{
       const v = Number(e.target.value);
       if(!v || v < 1){ toast("El multiplicador tiene que ser 1 o más"); e.target.value = settings.mult; return; }
@@ -358,7 +373,7 @@ function setSort(k){
 function openModal(id){
   const p = id ? state.productos.find(x=>x.id===id) : null;
   state.editing = p ? {...p, crit:{...p.crit}, tags:[...(p.tags||[])], competidores:(p.competidores||[]).map(c=>({...c}))}
-                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"", whatsapp:"",
+                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"", whatsapp:"", paisProv:"Argentina",
                         tipoProv:"Mayorista local", origen:"Argentina (importador)",
                         fob:"", venta:"", moq:"", competidores:[], veredicto:"evaluar", notas:"",
                         aplicaMult:true, mult:settings.mult,
@@ -417,7 +432,13 @@ function renderModal(){
 
     <div class="frow">
       <div class="field"><label>Proveedor</label><input class="input" data-f="proveedor" value="${esc(e.proveedor)}" placeholder="Nombre"></div>
+      <div class="field"><label>País del proveedor</label>
+        <select class="input" data-f="paisProv">${PAISES.map(x=>`<option value="${esc(x)}" ${x===paisDe(e)?"selected":""}>${bandera(x)} ${esc(x)}</option>`).join("")}</select></div>
+    </div>
+
+    <div class="frow">
       <div class="field"><label>Tipo</label><select class="input" data-f="tipoProv">${opt(TIPOS_PROV,e.tipoProv)}</select></div>
+      <div class="field"><label>&nbsp;</label><div class="hintline" style="padding-top:9px">Dónde está el proveedor, que puede no ser de dónde viene la mercadería.</div></div>
     </div>
 
     <div class="frow one"><div class="field">

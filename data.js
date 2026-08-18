@@ -10,6 +10,14 @@ const RUBROS = [
 
 const ORIGENES = ["China","Argentina (importador)","Argentina (fabricante)","Brasil","India","Otro"];
 
+/* País donde está el proveedor. Puede no coincidir con el origen de la mercadería:
+   un mayorista colombiano vende producto chino. */
+const PAISES = ["Argentina","China","Colombia","Brasil","India","Estados Unidos","España","Otro"];
+const BANDERAS = {
+  "Argentina":"🇦🇷","China":"🇨🇳","Colombia":"🇨🇴","Brasil":"🇧🇷",
+  "India":"🇮🇳","Estados Unidos":"🇺🇸","España":"🇪🇸","Otro":"🌐"
+};
+
 const TIPOS_PROV = ["1688","Alibaba","Mayorista local","Fabricante nacional","Importador local","Otro"];
 
 const TAGS = ["funcional","impulso","nicho","recompra","demo en video","regalo","liviano","sin variantes"];
@@ -41,9 +49,10 @@ const PROVEEDORES = [
     nota:"Stock para pet shops al por mayor." },
   { nombre:"DonBodegón Mayorista", tipo:"Importador local", rubro:"Mascotas", pais:"Argentina",
     url:"https://mayorista.donbodegon.com/c/Animales%20y%20Mascotas",
-    nota:"Importadores directos: bolsos, correas, bozales, juguetes." },
+    nota:"⚠️ Es COLOMBIANO (+57), no argentino. Importa de China y vende en Colombia — sirve como referencia de precio, no como proveedor local." },
   { nombre:"MAU", tipo:"Fabricante nacional", rubro:"Mascotas", pais:"Argentina",
-    url:"https://mau.com.ar/",
+    whatsapp:"11 3533-5659",
+    url:"https://mau.com.ar/tienda/",
     nota:"Fábrica con +10 años. Abastece pet shops, veterinarias y cadenas. Reposición rápida, sin aduana." },
   { nombre:"Happy Pet", tipo:"Fabricante nacional", rubro:"Mascotas", pais:"Argentina",
     url:"https://www.happypet-accesorios.com.ar/ventas-por-mayor/",
@@ -124,28 +133,33 @@ const SEED = [
     id:"s1", nombre:"Comedero antivoracidad", rubro:"Mascotas",
     tags:["funcional","demo en video","liviano","sin variantes"],
     proveedor:"Petcom", provUrl:"https://www.petcom.com.ar/mayoristas-petcom/",
+    url:"https://www.petcom.com.ar/alimentacion-y-bebederos/bowls-clasicos-y-ergonomicos/",
+    paisProv:"Argentina",
     tipoProv:"Importador local", origen:"Argentina (importador)",
     fob:2.5, venta:18, moq:20,
     competidores:[{n:"Genérico ML",u:"",p:"16",v:"500+/mes"}],
     crit:{margen:4,competencia:3,recompra:2,certificacion:5,logistica:4,demo:5,variantes:5},
     veredicto:"estrella",
-    notas:"ANCLA del catálogo. El video del perro comiendo despacio se hace solo. Pedir precio a Petcom y MAU y comparar."
+    notas:"ANCLA del catálogo. El video del perro comiendo despacio se hace solo. El link va a la CATEGORÍA de bowls de Petcom — no encontré la ficha del antivoracidad puntual, pedila por WhatsApp. Comparar con MAU."
   },
   {
     id:"s2", nombre:"Alfombra de lamer (lick mat)", rubro:"Mascotas",
     tags:["funcional","impulso","liviano","sin variantes"],
-    proveedor:"MAU", provUrl:"https://mau.com.ar/",
+    proveedor:"MAU", provUrl:"https://mau.com.ar/tienda/",
+    whatsapp:"11 3533-5659", paisProv:"Argentina",
     tipoProv:"Fabricante nacional", origen:"Argentina (fabricante)",
     fob:1.8, venta:12, moq:20,
     competidores:[],
     crit:{margen:5,competencia:4,recompra:2,certificacion:5,logistica:5,demo:5,variantes:5},
     veredicto:"estrella",
-    notas:"Satélite perfecto del comedero. Margen altísimo, casi no pesa. Va en todos los bundles."
+    notas:"Satélite perfecto del comedero. Margen altísimo, casi no pesa. No lo encontré en el catálogo online de MAU: preguntar por WhatsApp si lo fabrican."
   },
   {
     id:"s3", nombre:"Juguete dispensador de snacks", rubro:"Mascotas",
     tags:["funcional","nicho","demo en video"],
-    proveedor:"MAU", provUrl:"https://mau.com.ar/",
+    proveedor:"MAU", provUrl:"https://mau.com.ar/tienda/",
+    url:"https://mau.com.ar/producto/rueda-tipo-neumatico-interactivo-dog-food-grande/",
+    whatsapp:"11 3533-5659", paisProv:"Argentina",
     tipoProv:"Fabricante nacional", origen:"Argentina (fabricante)",
     fob:3.2, venta:20, moq:20,
     competidores:[],
@@ -157,7 +171,7 @@ const SEED = [
     id:"s4", nombre:"Bolsitas biodegradables (pack)", rubro:"Mascotas",
     tags:["funcional","recompra","liviano","sin variantes"],
     proveedor:"DonBodegón Mayorista", provUrl:"https://mayorista.donbodegon.com/c/Animales%20y%20Mascotas",
-    whatsapp:"",
+    whatsapp:"+573007170351", paisProv:"Colombia",
     tipoProv:"Importador local", origen:"Argentina (importador)",
     fob:0.9, venta:6, moq:50,
     competidores:[],
@@ -168,7 +182,9 @@ const SEED = [
   {
     id:"s5", nombre:"Cinturón de seguridad para perro (auto)", rubro:"Mascotas",
     tags:["funcional","nicho","regalo","liviano"],
-    proveedor:"Happy Pet", provUrl:"https://www.happypet-accesorios.com.ar/ventas-por-mayor/",
+    proveedor:"MAU", provUrl:"https://mau.com.ar/tienda/",
+    url:"https://mau.com.ar/producto/correa-cinturon-de-seguridad-regulable/",
+    whatsapp:"11 3533-5659", paisProv:"Argentina",
     tipoProv:"Fabricante nacional", origen:"Argentina (fabricante)",
     fob:2.1, venta:15, moq:20,
     competidores:[],
@@ -182,7 +198,7 @@ const SEED = [
     proveedor:"温州浙曜商贸有限公司 (1688)",
     url:"https://detail.1688.com/offer/722744469572.html",
     provUrl:"https://www.1688.com/",
-    tipoProv:"1688", origen:"China",
+    tipoProv:"1688", origen:"China", paisProv:"China",
     fob:2.4, venta:35, moq:2,
     competidores:[],
     crit:{margen:1,competencia:1,recompra:1,certificacion:2,logistica:2,demo:3,variantes:1},

@@ -288,3 +288,9 @@ a.accbtn{text-decoration:none}
 }
 .accbtn.off{cursor:pointer}
 .accbtn.off:hover{opacity:.75;border-color:var(--acc);color:var(--acc)}
+
+/* ---------- país del proveedor ---------- */
+.pais{display:inline-flex;align-items:center;gap:4px}
+.bandera{font-size:13px;line-height:1}
+.bandera-lg{font-size:17px;margin-right:6px;vertical-align:-1px}
+.psub2{color:var(--tx3);margin-left:5px}

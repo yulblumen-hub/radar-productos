@@ -29,7 +29,10 @@ Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache
 ### WhatsApp
 Cargá el teléfono en el producto. Se asume Argentina: se limpian el 0 de área y el 15, y se antepone 549. Para otro país escribilo con `+` adelante y se respeta tal cual. El mensaje que abre ya trae las dos preguntas obligatorias: precio mayorista, mínimo de compra y factura A.
 - **Rubros** — score promedio y estrellas por categoría.
-- **Proveedores** — los relevados, con link. Marca cuáles ya estás usando.
+- **Proveedores** — los relevados, con bandera del país, link y WhatsApp. Marca cuáles ya estás usando.
+
+### País del proveedor
+Va con bandera bajo el nombre en la tabla, y hay filtro por país. **No es lo mismo que el origen de la mercadería**: un mayorista colombiano vende producto chino. Cuando difieren, la tabla aclara "llega de …".
 - **Nichos** — mascotas / cocina / auto, con ancla, satélites y recompra.
 
 ## Scoring (0-100)
