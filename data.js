@@ -321,11 +321,14 @@ const DOMINIOS = [
 
 
 /* ---------- Directorio de proveedores argentinos ----------
-   Todos verificados en agosto de 2026: busqué cada uno y confirmé que el sitio
-   responde. `rubros` usa las macro-categorías, así que un proveedor de bazar
+   Verificados en agosto de 2026. Para cada uno confirmé dos cosas: que el sitio
+   responde y que es argentino de verdad — teléfono +54, precios en pesos o
+   domicilio en el país. Un directorio español se había colado y se sacó.
+   El dominio no alcanza como prueba: portalmayorista.com es argentino y
+   proveedores.com no lo era. `rubros` usa las macro-categorías, así que un proveedor de bazar
    aparece en los ~15 rubros de Hogar sin tener que listarlos uno por uno.
    Subir DIR_VER cuando se agreguen: los usuarios lo reciben sin perder los suyos. */
-const DIR_VER = 1;
+const DIR_VER = 2;
 
 const DIRECTORIO = [
   /* ---- Hogar, bazar y limpieza ---- */
@@ -336,7 +339,8 @@ const DIRECTORIO = [
   { n:"Distribuidora Fenix", url:"https://distribuidorafenix.com.ar/", rubros:["Hogar"],
     tipo:"Distribuidor", zona:"Argentina", nota:"Bazar, limpieza y hogar con atención personalizada." },
   { n:"Portal Mayorista", url:"https://www.portalmayorista.com/", rubros:["Hogar","Herramientas","Fitness"],
-    tipo:"Distribuidor", zona:"Argentina", nota:"30 años. Bazar, polirrubro, ferretería y deportes. Venta online mayorista." },
+    tipo:"Distribuidor", zona:"Argentina", whatsapp:"11 2311-4551",
+    nota:"30 años. Bazar, polirrubro, ferretería y deportes. Venta online mayorista." },
 
   /* ---- Salud y ortopedia ---- */
   { n:"Care Quip", url:"https://care-quip.com.ar/", rubros:["Salud"],
@@ -397,13 +401,13 @@ const DIRECTORIO = [
   /* ---- Buscadores de proveedores (directorios) ---- */
   { n:"El Ferretero", url:"https://elferretero.com.ar/", rubros:["Herramientas"],
     tipo:"Directorio", zona:"Argentina", nota:"Buscador de distribuidores de ferretería por producto." },
-  { n:"Proveedores.com", url:"https://www.proveedores.com/", rubros:["Todos"],
-    tipo:"Directorio", zona:"Iberoamérica", nota:"Directorio general de mayoristas por rubro. Útil para encontrar nombres nuevos." }
 ];
 
+/* A propósito no existe el alcance "Todos": un proveedor mal clasificado
+   aparecería en los 111 rubros. Cada uno declara sus categorías. */
 const provsDeRubro = rubroNombre => {
   const cat = metaRubro(rubroNombre).cat;
-  return DIRECTORIO.filter(p => p.rubros.includes(cat) || p.rubros.includes("Todos"));
+  return DIRECTORIO.filter(p => p.rubros.includes(cat));
 };
 
 /* ---------- Nichos evaluados ---------- */
