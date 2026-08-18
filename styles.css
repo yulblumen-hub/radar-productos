@@ -48,28 +48,28 @@
 
 @media (prefers-color-scheme: light){
   :root{
-    --bg:#f4f7f5; --bg2:#ffffff; --bg3:#edf2ef; --line:#dbe4df;
-    --tx:#111a16; --tx2:#4b5a54; --tx3:#7c8b85;
+    --bg:#e0dccc; --bg2:#ffffff; --bg3:#f2efe6; --line:#c5bfab;
+    --tx:#101a15; --tx2:#39463f; --tx3:#5f6d65;
     --acc:#0e7a50; --acc2:#0b5f3e; --accHov:#0c6a45; --onAcc:#ffffff;
     --oro:#a97c14; --oro2:#8a6410; --onOro:#ffffff;
     --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
     --star:#a97c14; --warn:#b8601f; --bad:#bf3a44; --info:#1d6fd0;
-    --pStar:#fbf0d6; --pGood:#d8f2e7; --pInfo:#dbeafb; --pBad:#fbdede; --pMute:#e7ecea;
-    --dangerLine:#e8c4c4; --dangerBg:#fbeded;
-    --scrim:rgba(30,45,40,.42); --sombra:0 22px 60px rgba(20,40,32,.18);
+    --pStar:#f6e6bd; --pGood:#c9ebda; --pInfo:#cfe2f7; --pBad:#f7d2d4; --pMute:#e2ded1;
+    --dangerLine:#dfb3b6; --dangerBg:#f9e6e7;
+    --scrim:rgba(24,34,29,.5); --sombra:0 20px 50px rgba(26,38,31,.22);
   }
 }
 
 :root[data-theme="light"]{
-  --bg:#f4f7f5; --bg2:#ffffff; --bg3:#edf2ef; --line:#dbe4df;
-  --tx:#111a16; --tx2:#4b5a54; --tx3:#7c8b85;
+  --bg:#e0dccc; --bg2:#ffffff; --bg3:#f2efe6; --line:#c5bfab;
+  --tx:#101a15; --tx2:#39463f; --tx3:#5f6d65;
   --acc:#0e7a50; --acc2:#0b5f3e; --accHov:#0c6a45; --onAcc:#ffffff;
   --oro:#a97c14; --oro2:#8a6410; --onOro:#ffffff;
   --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
   --star:#a97c14; --warn:#b8601f; --bad:#bf3a44; --info:#1d6fd0;
-  --pStar:#fbf0d6; --pGood:#d8f2e7; --pInfo:#dbeafb; --pBad:#fbdede; --pMute:#e7ecea;
-  --dangerLine:#e8c4c4; --dangerBg:#fbeded;
-  --scrim:rgba(30,45,40,.42); --sombra:0 22px 60px rgba(20,40,32,.18);
+  --pStar:#f6e6bd; --pGood:#c9ebda; --pInfo:#cfe2f7; --pBad:#f7d2d4; --pMute:#e2ded1;
+  --dangerLine:#dfb3b6; --dangerBg:#f9e6e7;
+  --scrim:rgba(24,34,29,.5); --sombra:0 20px 50px rgba(26,38,31,.22);
 }
 
 :root[data-theme="soft"]{
@@ -820,3 +820,35 @@ code{font-family:var(--mono)}
 .nuevo{background:var(--oro);color:var(--onOro)}
 .est.on{color:var(--oro)}
 .fav.on{color:var(--oro)}
+
+/* ---------- en claro las superficies necesitan separarse del fondo ---------- */
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .kpi,
+:root[data-theme="light"] .minicard,
+:root[data-theme="light"] .rubro,
+:root[data-theme="light"] .tablewrap,
+:root[data-theme="light"] .numeros,
+:root[data-theme="light"] .side,
+:root[data-theme="light"] .barra,
+:root[data-theme="light"] .tienda{
+  box-shadow:0 1px 2px rgba(26,38,31,.06), 0 1px 0 rgba(26,38,31,.03);
+}
+:root[data-theme="light"] th{border-bottom-width:2px}
+:root[data-theme="light"] tbody tr:hover{background:var(--bg3)}
+:root[data-theme="light"] .snav.active{background:#dfeae2}
+
+@media (prefers-color-scheme: light){
+  :root:not([data-theme]) .card,
+  :root:not([data-theme]) .kpi,
+  :root:not([data-theme]) .minicard,
+  :root:not([data-theme]) .rubro,
+  :root:not([data-theme]) .tablewrap,
+  :root:not([data-theme]) .numeros,
+  :root:not([data-theme]) .side,
+  :root:not([data-theme]) .barra,
+  :root:not([data-theme]) .tienda{
+    box-shadow:0 1px 2px rgba(26,38,31,.06), 0 1px 0 rgba(26,38,31,.03);
+  }
+  :root:not([data-theme]) th{border-bottom-width:2px}
+  :root:not([data-theme]) .snav.active{background:#dfeae2}
+}
