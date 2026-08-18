@@ -36,8 +36,10 @@
 :root{
   --bg:#0e1116; --bg2:#151a21; --bg3:#1c232c; --line:#252d38;
   --tx:#e6ebf2; --tx2:#93a1b3; --tx3:#5f6d80;
-  --acc:#3fd6a0; --acc2:#2aa87c; --accHov:#4ee5ae; --onAcc:#08130f;
-  --star:#f5c451; --warn:#f59e5b; --bad:#ef6b6b; --info:#5aa9f5;
+  --acc:#3fbf86; --acc2:#2c9366; --accHov:#4fd398; --onAcc:#06170f;
+  --oro:#e3b34f; --oro2:#c9963a; --onOro:#1a1204;
+  --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
+  --star:#e3b34f; --warn:#e8975a; --bad:#e5707a; --info:#5aa9f5;
   --pStar:#3a2f12; --pGood:#123028; --pInfo:#1b2836; --pBad:#3a1e1e; --pMute:#242a33;
   --dangerLine:#4a2b2b; --dangerBg:#2a1818;
   --scrim:rgba(6,9,13,.78); --sombra:0 22px 60px rgba(0,0,0,.55);
@@ -48,8 +50,10 @@
   :root{
     --bg:#f4f7f5; --bg2:#ffffff; --bg3:#edf2ef; --line:#dbe4df;
     --tx:#111a16; --tx2:#4b5a54; --tx3:#7c8b85;
-    --acc:#0f9b70; --acc2:#0c7d5a; --accHov:#0c8460; --onAcc:#ffffff;
-    --star:#a8760a; --warn:#c2611f; --bad:#c33b3b; --info:#1d6fd0;
+    --acc:#0e7a50; --acc2:#0b5f3e; --accHov:#0c6a45; --onAcc:#ffffff;
+    --oro:#a97c14; --oro2:#8a6410; --onOro:#ffffff;
+    --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
+    --star:#a97c14; --warn:#b8601f; --bad:#bf3a44; --info:#1d6fd0;
     --pStar:#fbf0d6; --pGood:#d8f2e7; --pInfo:#dbeafb; --pBad:#fbdede; --pMute:#e7ecea;
     --dangerLine:#e8c4c4; --dangerBg:#fbeded;
     --scrim:rgba(30,45,40,.42); --sombra:0 22px 60px rgba(20,40,32,.18);
@@ -59,8 +63,10 @@
 :root[data-theme="light"]{
   --bg:#f4f7f5; --bg2:#ffffff; --bg3:#edf2ef; --line:#dbe4df;
   --tx:#111a16; --tx2:#4b5a54; --tx3:#7c8b85;
-  --acc:#0f9b70; --acc2:#0c7d5a; --accHov:#0c8460; --onAcc:#ffffff;
-  --star:#a8760a; --warn:#c2611f; --bad:#c33b3b; --info:#1d6fd0;
+  --acc:#0e7a50; --acc2:#0b5f3e; --accHov:#0c6a45; --onAcc:#ffffff;
+  --oro:#a97c14; --oro2:#8a6410; --onOro:#ffffff;
+  --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
+  --star:#a97c14; --warn:#b8601f; --bad:#bf3a44; --info:#1d6fd0;
   --pStar:#fbf0d6; --pGood:#d8f2e7; --pInfo:#dbeafb; --pBad:#fbdede; --pMute:#e7ecea;
   --dangerLine:#e8c4c4; --dangerBg:#fbeded;
   --scrim:rgba(30,45,40,.42); --sombra:0 22px 60px rgba(20,40,32,.18);
@@ -69,7 +75,9 @@
 :root[data-theme="soft"]{
   --bg:#1c2128; --bg2:#22272e; --bg3:#2d333b; --line:#373e47;
   --tx:#cdd9e5; --tx2:#909dab; --tx3:#768390;
-  --acc:#46c39a; --acc2:#3a9e7d; --accHov:#57d3a9; --onAcc:#0d1117;
+  --acc:#3cb98a; --acc2:#309a72; --accHov:#4bcb9a; --onAcc:#0d1117;
+  --oro:#daaa3f; --oro2:#bd8f2e; --onOro:#17120a;
+  --verde:#0d4a35; --verde2:#12563d; --hueso:#f4f2ec;
   --star:#daaa3f; --warn:#e0955c; --bad:#e5717a; --info:#6cb6ff;
   --pStar:#3b3018; --pGood:#193b30; --pInfo:#1e2f42; --pBad:#3d2226; --pMute:#2d333b;
   --dangerLine:#4c2f33; --dangerBg:#2c1d20;
@@ -79,8 +87,10 @@
 :root[data-theme="dark"]{
   --bg:#0e1116; --bg2:#151a21; --bg3:#1c232c; --line:#252d38;
   --tx:#e6ebf2; --tx2:#93a1b3; --tx3:#5f6d80;
-  --acc:#3fd6a0; --acc2:#2aa87c; --accHov:#4ee5ae; --onAcc:#08130f;
-  --star:#f5c451; --warn:#f59e5b; --bad:#ef6b6b; --info:#5aa9f5;
+  --acc:#3fbf86; --acc2:#2c9366; --accHov:#4fd398; --onAcc:#06170f;
+  --oro:#e3b34f; --oro2:#c9963a; --onOro:#1a1204;
+  --verde:#0c4531; --verde2:#114f38; --hueso:#f7f5ef;
+  --star:#e3b34f; --warn:#e8975a; --bad:#e5707a; --info:#5aa9f5;
   --pStar:#3a2f12; --pGood:#123028; --pInfo:#1b2836; --pBad:#3a1e1e; --pMute:#242a33;
   --dangerLine:#4a2b2b; --dangerBg:#2a1818;
   --scrim:rgba(6,9,13,.78); --sombra:0 22px 60px rgba(0,0,0,.55);
@@ -731,3 +741,82 @@ main{width:100%}
 code{font-family:var(--mono)}
 .pname{letter-spacing:-.008em}
 .hot-txt h3, .reco-cuerpo h3{letter-spacing:-.025em;font-weight:600}
+
+/* ================= hero de Inicio ================= */
+/* Bloque de marca: verde profundo siempre, en los tres temas. Es lo único
+   que no cambia con el tema, porque es la identidad. */
+.hero{
+  position:relative;overflow:hidden;border-radius:var(--r);
+  background:linear-gradient(135deg,var(--verde) 0%,var(--verde2) 55%,#16624a 100%);
+  padding:30px 30px 24px;margin-bottom:18px;
+  border:1px solid rgba(255,255,255,.06);
+}
+.hero::after{                       /* halo dorado, muy tenue */
+  content:"";position:absolute;right:-90px;top:-90px;width:320px;height:320px;border-radius:50%;
+  background:radial-gradient(circle,rgba(227,179,79,.20),transparent 68%);pointer-events:none;
+}
+.hero-sello{
+  display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);
+  font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--oro);margin-bottom:12px;
+}
+.hero-sello i{width:6px;height:6px;border-radius:50%;background:var(--oro);display:block}
+.hero h2{
+  font-size:clamp(25px,3.4vw,38px);line-height:1.1;letter-spacing:-.03em;font-weight:600;
+  color:var(--hueso);max-width:15ch;margin-bottom:20px;
+}
+.hero h2 em{font-style:normal;color:var(--oro)}
+.hero-buscar{
+  display:flex;align-items:center;gap:10px;background:var(--hueso);
+  border-radius:12px;padding:5px 6px 5px 15px;max-width:640px;
+  box-shadow:0 10px 30px rgba(0,0,0,.22);
+}
+.hero-buscar .lupa{color:#6a7772;font-size:17px}
+.hero-buscar input{
+  flex:1;background:none;border:0;outline:none;font:inherit;font-size:15px;
+  color:#14211b;padding:11px 0;min-width:0;
+}
+.hero-buscar input::placeholder{color:#8a958f}
+.hero-buscar .btn{background:var(--verde);color:var(--hueso);border-color:transparent;padding:10px 20px}
+.hero-buscar .btn:hover{background:var(--verde2)}
+.hero-atajos{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.atajo{
+  font-family:var(--mono);font-size:11.5px;font-weight:500;cursor:pointer;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);color:var(--hueso);
+  padding:5px 11px;border-radius:20px;transition:.14s;
+}
+.atajo:hover{background:rgba(227,179,79,.22);border-color:var(--oro);color:var(--oro)}
+
+/* ---- banda rotativa ---- */
+.rota{
+  margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;gap:14px;min-height:60px;
+}
+.rota-cont{flex:1;min-width:0;position:relative}
+.rota-slide{opacity:0;position:absolute;inset:0;transition:opacity .5s ease}
+.rota-slide.on{opacity:1;position:relative}
+.rota-et{
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.07em;
+  color:var(--oro);display:block;margin-bottom:3px;
+}
+.rota-tx{color:var(--hueso);font-size:14px;line-height:1.45;margin:0}
+.rota-tx b{color:#fff}
+.rota-tx small{display:block;color:rgba(247,245,239,.62);font-size:12px;margin-top:2px}
+.rota-puntos{display:flex;gap:6px;flex:none}
+.rota-puntos button{
+  width:7px;height:7px;padding:0;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.26);border:0;transition:.16s;
+}
+.rota-puntos button.on{background:var(--oro);width:20px;border-radius:4px}
+@media (prefers-reduced-motion: reduce){ .rota-slide{transition:none} }
+@media(max-width:640px){
+  .hero{padding:22px 18px 18px}
+  .hero-buscar{flex-wrap:wrap}
+  .hero-buscar input{font-size:16px}
+  .hero-buscar .btn{width:100%}
+}
+
+/* el dorado también manda en lo destacado */
+.pill.estrella{background:var(--pStar);color:var(--oro)}
+.nuevo{background:var(--oro);color:var(--onOro)}
+.est.on{color:var(--oro)}
+.fav.on{color:var(--oro)}

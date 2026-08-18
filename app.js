@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v19";
+const APP_VER = "v20";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -490,6 +490,100 @@ function nuevoDesdeCaliente(){
   nuevoDesdeReco();
 }
 
+/* ================= HERO ================= */
+/* Las diapositivas salen de datos reales, no de frases sueltas: el candidato
+   del día, el rubro de mejor margen y lo último que lanzó una tienda espiada. */
+function diapos(){
+  const d=[];
+  const c=calienteDeHoy();
+  d.push({ et:"CANDIDATO DE HOY",
+           tx:`<b>${esc(c.p)}</b> — score ${c.score}/100<small>${esc(c.w)}</small>`,
+           ir:()=>{ state.reco=c; state.view="dashboard"; render(); } });
+
+  const mejor=[...RUBROS_META].filter(r=>r.n!=="Otro").sort((a,b)=>b.margen-a.margen)[0];
+  d.push({ et:"MEJOR MARGEN",
+           tx:`<b>${esc(mejor.n)}</b> — ${mejor.margen}% de margen típico<small>${esc(mejor.nota)}</small>`,
+           ir:()=>irARubro(mejor.n) });
+
+  const op=[...RUBROS_META].filter(r=>r.n!=="Otro").sort((a,b)=>oportunidad(b.n)-oportunidad(a.n))[0];
+  d.push({ et:"MÁS OPORTUNIDAD",
+           tx:`<b>${esc(op.n)}</b> — oportunidad ${oportunidad(op.n)}/100<small>${esc(op.nota)}</small>`,
+           ir:()=>irARubro(op.n) });
+
+  if(ultimoLanzamiento){
+    const l=ultimoLanzamiento;
+    d.push({ et:"RECIÉN LANZADO",
+             tx:`<b>${esc(l.titulo.slice(0,52))}</b> — ${pesos(l.precio)}<small>${esc(l.tienda)} lo publicó hace ${diasDesde(l.publicado)} días</small>`,
+             ir:()=>{ state.view="tiendas"; render(); pintarTiendas(); } });
+  }
+  const pend=cotiz.filter(c=>c.estado==="pedida" && diasCot(c.fecha)>=4);
+  if(pend.length){
+    d.push({ et:"TE DEBEN RESPUESTA",
+             tx:`<b>${pend.length} cotización${pend.length===1?"":"es"} sin contestar</b><small>Hace más de 4 días. Conviene insistir.</small>`,
+             ir:()=>{ state.view="cotizaciones"; render(); } });
+  }
+  return d;
+}
+
+let ultimoLanzamiento = null;
+let rotaTimer = null, rotaIdx = 0;
+
+function heroHTML(){
+  const ds = diapos();
+  return `
+  <div class="hero">
+    <span class="hero-sello"><i></i>Proveedores verificados en toda Argentina</span>
+    <h2>Encontrá el <em>producto</em> que tu negocio necesita.</h2>
+
+    <div class="hero-buscar">
+      <span class="lupa">⌕</span>
+      <input id="qHero" placeholder="Rubro, producto o proveedor…" value="${esc(state.qGlobal||"")}" autocomplete="off">
+      <button class="btn" id="btnHeroBuscar">Buscar</button>
+    </div>
+
+    <div class="hero-atajos">
+      ${["Mascotas","Wellness","Salud","Auto","Hogar"].map(c=>
+        `<button class="atajo" onclick="verMacro('${c}')">${IC_MACRO[c]||""} ${c}</button>`).join("")}
+      <button class="atajo" onclick="state.view='rubros';state.rubroOrden='margen';render()">★ Mejores márgenes</button>
+    </div>
+
+    <div class="rota">
+      <div class="rota-cont" id="rotaCont">
+        ${ds.map((d,i)=>`<div class="rota-slide ${i===0?"on":""}" data-i="${i}" onclick="irDiapo(${i})" style="cursor:pointer">
+          <span class="rota-et">${d.et}</span><p class="rota-tx">${d.tx}</p></div>`).join("")}
+      </div>
+      <div class="rota-puntos" id="rotaPuntos">
+        ${ds.map((_,i)=>`<button class="${i===0?"on":""}" onclick="mostrarDiapo(${i},true)" aria-label="Ver ${i+1}"></button>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function mostrarDiapo(i, manual){
+  const cont=$("#rotaCont"); if(!cont) return;
+  const slides=$$(".rota-slide",cont), puntos=$$("#rotaPuntos button");
+  if(!slides.length) return;
+  rotaIdx = ((i % slides.length) + slides.length) % slides.length;
+  slides.forEach((s,n)=>s.classList.toggle("on", n===rotaIdx));
+  puntos.forEach((p,n)=>p.classList.toggle("on", n===rotaIdx));
+  if(manual) arrancarRota();
+}
+function arrancarRota(){
+  clearInterval(rotaTimer);
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  rotaTimer = setInterval(()=>{
+    if(!$("#rotaCont")){ clearInterval(rotaTimer); return; }
+    mostrarDiapo(rotaIdx+1);
+  }, 7000);
+}
+function irDiapo(i){
+  const d = diapos()[i];
+  if(d && d.ir) d.ir();
+}
+function verMacro(cat){
+  state.view="rubros"; state.fMacro=cat; state.qRubro=""; render();
+}
+
 /* ================= VISTAS ================= */
 
 function vDashboard(){
@@ -513,6 +607,8 @@ function vDashboard(){
 
   const provTot = DIRECTORIO.length + PROVEEDORES.filter(p=>p.pais==="Argentina").length;
   return `
+  ${heroHTML()}
+
   <div class="numeros">
     <div><b>${provTot}</b><span>proveedores</span></div>
     <div><b>${RUBROS_META.length-1}</b><span>rubros</span></div>
@@ -1159,6 +1255,11 @@ async function pintarTiendas(){
     const d = await traerTienda(t.url);
     const sigue = document.querySelector(`#tienda-${t.id} .tienda-body`);
     if(sigue) sigue.innerHTML = tiendaHTML(t, d);
+    if(d.productos && d.productos.length){
+      const ult=[...d.productos].sort((a,b)=>(b.publicado||"").localeCompare(a.publicado||""))[0];
+      if(ult && (!ultimoLanzamiento || (ult.publicado||"") > (ultimoLanzamiento.publicado||"")))
+        ultimoLanzamiento = {...ult, tienda:t.nombre};
+    }
   }
 }
 
@@ -1394,6 +1495,21 @@ function render(){
     $("#btnAddTienda").onclick = ()=>{ agregarTienda(inp.value); inp.value=""; };
     inp.onkeydown = e=>{ if(e.key==="Enter"){ agregarTienda(inp.value); inp.value=""; } };
     $("#btnRefrescarT").onclick = ()=>{ tiendaCache.clear(); render(); pintarTiendas(); toast("Actualizando…"); };
+  }
+  if(v==="dashboard"){
+    const qh=$("#qHero");
+    if(qh){
+      const lanzar=()=>{
+        state.qGlobal = qh.value;
+        const g=$("#qGlobal"); if(g) g.value = qh.value;
+        pintarBusqueda();
+        if(qh.value.trim().length>=2) $("#resGlobal").scrollIntoView({behavior:"smooth",block:"start"});
+      };
+      qh.oninput = lanzar;
+      qh.onkeydown = e=>{ if(e.key==="Enter") lanzar(); };
+      const b=$("#btnHeroBuscar"); if(b) b.onclick = lanzar;
+    }
+    arrancarRota();
   }
   if(v==="cotizaciones"){
     const q=$("#qCot");

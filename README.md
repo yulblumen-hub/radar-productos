@@ -27,6 +27,11 @@ Pegá el link del producto y se completan solos proveedor, país, tipo, origen y
 ## Fotos
 Campo de imagen por producto, con miniatura en la tabla. Sin foto, muestra un mosaico con el ícono y el color del rubro.
 
+## Identidad
+Verde profundo, dorado y hueso. El verde es el bloque de marca del inicio y no cambia con el tema —es lo único fijo—; el dorado marca lo destacado (favoritos, estrellas, lo nuevo) y el hueso es el fondo claro.
+
+El inicio abre con un buscador grande y una banda que rota cada 7 segundos entre datos reales: el candidato del día, el rubro de mejor margen, el de más oportunidad, lo último que lanzó una tienda espiada y las cotizaciones que llevan más de 4 días sin respuesta. Cada una es clickeable y te lleva adonde corresponde. Con `prefers-reduced-motion` no rota.
+
 ## Tipografía
 IBM Plex Sans para el texto y IBM Plex Mono para todo lo numérico: en un tablero los dígitos se comparan en columna, y el mono los alinea sin esfuerzo. Los archivos viven en `fonts/` y los cachea el service worker, así que la app no depende de ningún CDN y anda offline.
 
