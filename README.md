@@ -24,7 +24,7 @@ Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache
 
 ## Qué hace
 - **Dashboard** — KPIs, top de categorías por score, ranking de productos, recomendación al azar.
-- **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos.
+- **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos. El nombre abre el link directo del producto (↗) cuando lo cargaste; el de la columna Proveedor va al sitio del proveedor.
 - **Rubros** — score promedio y estrellas por categoría.
 - **Proveedores** — los relevados, con link. Marca cuáles ya estás usando.
 - **Nichos** — mascotas / cocina / auto, con ancla, satélites y recompra.

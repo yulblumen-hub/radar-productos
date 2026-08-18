@@ -153,7 +153,7 @@ function vDashboard(){
 function vProductos(){
   let ps = state.productos.filter(p=>{
     const q = state.q.toLowerCase();
-    const hit = !q || [p.nombre,p.rubro,p.proveedor,p.notas,(p.tags||[]).join(" ")]
+    const hit = !q || [p.nombre,p.rubro,p.proveedor,p.notas,p.url,(p.tags||[]).join(" ")]
       .join(" ").toLowerCase().includes(q);
     return hit
       && (!state.fRubro || p.rubro===state.fRubro)
@@ -198,7 +198,9 @@ function vProductos(){
     <tbody>${ps.map(p=>{
       const m=margen(p), s=score(p);
       return `<tr onclick="openModal('${p.id}')">
-        <td><div class="pname">${esc(p.nombre)}</div>
+        <td><div class="pname">${p.url
+              ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Abrir el producto">${esc(p.nombre)} <span style="font-size:10px;opacity:.6">↗</span></a>`
+              : esc(p.nombre)}</div>
             <div class="psub">${(p.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></td>
         <td style="color:var(--tx2)">${esc(p.rubro||"—")}</td>
         <td>${p.provUrl?`<a href="${esc(p.provUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(p.proveedor||"link")}</a>`:esc(p.proveedor||"—")}
@@ -317,7 +319,7 @@ function setSort(k){
 function openModal(id){
   const p = id ? state.productos.find(x=>x.id===id) : null;
   state.editing = p ? {...p, crit:{...p.crit}, tags:[...(p.tags||[])], competidores:(p.competidores||[]).map(c=>({...c}))}
-                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"",
+                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"",
                         tipoProv:"Mayorista local", origen:"Argentina (importador)",
                         fob:"", venta:"", moq:"", competidores:[], veredicto:"evaluar", notas:"",
                         aplicaMult:true, mult:settings.mult,
@@ -380,8 +382,14 @@ function renderModal(){
     </div>
 
     <div class="frow one"><div class="field">
+      <label>Link del producto</label>
+      <input class="input" data-f="url" value="${esc(e.url||"")}" placeholder="https://… la ficha exacta del producto">
+      <div class="hintline">La publicación puntual. Es el que abrís desde la tabla.</div>
+    </div></div>
+
+    <div class="frow one"><div class="field">
       <label>Link del proveedor</label>
-      <input class="input" data-f="provUrl" value="${esc(e.provUrl)}" placeholder="https://…">
+      <input class="input" data-f="provUrl" value="${esc(e.provUrl)}" placeholder="https://… el sitio o catálogo">
     </div></div>
 
     <div class="frow" style="grid-template-columns:1fr 1fr 1fr">
