@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v6";
+const APP_VER = "v7";
 const KEY  = "radar-productos-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);

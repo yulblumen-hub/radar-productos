@@ -47,7 +47,8 @@ const PROVEEDORES = [
     url:"https://petmarketdistribucion.com.ar/venta-mayorista/",
     whatsapp:"11 6506-6097",
     nota:"Stock para pet shops al por mayor." },
-  { nombre:"DonBodegón Mayorista", tipo:"Importador local", rubro:"Mascotas", pais:"Argentina",
+  { nombre:"DonBodegón Mayorista", tipo:"Importador local", rubro:"Mascotas", pais:"Colombia",
+    whatsapp:"+573007170351",
     url:"https://mayorista.donbodegon.com/c/Animales%20y%20Mascotas",
     nota:"⚠️ Es COLOMBIANO (+57), no argentino. Importa de China y vende en Colombia — sirve como referencia de precio, no como proveedor local." },
   { nombre:"MAU", tipo:"Fabricante nacional", rubro:"Mascotas", pais:"Argentina",
@@ -172,12 +173,12 @@ const SEED = [
     tags:["funcional","recompra","liviano","sin variantes"],
     proveedor:"DonBodegón Mayorista", provUrl:"https://mayorista.donbodegon.com/c/Animales%20y%20Mascotas",
     whatsapp:"+573007170351", paisProv:"Colombia",
-    tipoProv:"Importador local", origen:"Argentina (importador)",
+    tipoProv:"Importador local", origen:"China",
     fob:0.9, venta:6, moq:50,
     competidores:[],
     crit:{margen:3,competencia:2,recompra:5,certificacion:5,logistica:5,demo:2,variantes:5},
     veredicto:"potencial",
-    notas:"No es winner por sí solo: es el MOTOR DE RECOMPRA. Suscripción o pack x6 para que vuelvan sin pagar ads."
+    notas:"⚠️ El proveedor es COLOMBIANO: sirve de referencia de precio, no para comprar. Buscar equivalente argentino. No es winner por sí solo: es el MOTOR DE RECOMPRA. Suscripción o pack x6 para que vuelvan sin pagar ads."
   },
   {
     id:"s5", nombre:"Cinturón de seguridad para perro (auto)", rubro:"Mascotas",
