@@ -265,3 +265,18 @@ tbody tr:hover{background:var(--bg3)}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
 }
+
+/* ---------- botones de acción de cada fila ---------- */
+.acciones{white-space:nowrap;text-align:right}
+.accbtn{
+  display:inline-grid;place-items:center;width:28px;height:28px;margin-left:2px;
+  border:1px solid var(--line);border-radius:8px;background:var(--bg3);
+  color:var(--tx2);cursor:pointer;transition:.13s;vertical-align:middle;
+  font:inherit;padding:0;
+}
+a.accbtn{text-decoration:none}
+.accbtn:hover{border-color:var(--tx3);color:var(--tx);background:var(--bg2)}
+.accbtn.wa:hover{border-color:#25d366;color:#25d366}
+.accbtn.del:hover{border-color:var(--bad);color:var(--bad)}
+.accbtn.off{opacity:.28;cursor:not-allowed}
+.accbtn.off:hover{border-color:var(--line);color:var(--tx2);background:var(--bg3)}

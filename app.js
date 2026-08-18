@@ -6,6 +6,12 @@ const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
 const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const ICO = {
+  link:  `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  wa:    `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12 2a10 10 0 0 0-8.5 15.28L2 22l4.85-1.46A10 10 0 1 0 12 2zm0 18.3a8.3 8.3 0 0 1-4.23-1.16l-.3-.18-2.88.87.86-2.8-.2-.32A8.3 8.3 0 1 1 12 20.3z"/></svg>`,
+  tacho: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
+};
+
 const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 let settings = { mult: MULT_PUESTO };
@@ -58,6 +64,31 @@ function veredictoSugerido(s){
   if(s>=42) return "evaluar";
   return "clavo";
 }
+/* Arma el link de WhatsApp. Si el número empieza con "+" se respeta tal cual;
+   si no, se asume Argentina: se limpia el 0 de área y el 15, y se antepone 549. */
+function waNumero(tel){
+  if(!tel) return "";
+  const crudo = String(tel).trim();
+  const internacional = crudo.startsWith("+");
+  let d = crudo.replace(/\D/g, "");
+  if(!d) return "";
+  if(internacional) return d;
+  if(d.startsWith("54")){
+    const resto = d.slice(2);
+    return resto.startsWith("9") ? d : "549" + resto;
+  }
+  if(d.startsWith("0")) d = d.slice(1);          // 011... -> 11...
+  d = d.replace(/^(\d{2,4})15/, "$1");           // el 15 del celular
+  return "549" + d;
+}
+function waLink(p){
+  const n = waNumero(p.whatsapp);
+  if(!n) return "";
+  const msg = `Hola! Los contacto por ${p.nombre||"un producto"}. `
+            + `¿Me pasan precio mayorista y mínimo de compra? ¿Hacen factura A?`;
+  return `https://wa.me/${n}?text=${encodeURIComponent(msg)}`;
+}
+
 /* costo puesto: el multiplicador es un switch por producto, no depende del origen */
 function multDe(p){
   if(!p.aplicaMult) return 1;
@@ -210,7 +241,15 @@ function vProductos(){
         <td class="num" style="color:${m==null?"var(--tx3)":m>=65?"var(--acc)":m>=45?"var(--warn)":"var(--bad)"}">${m==null?"—":m+"%"}</td>
         <td style="min-width:110px">${scoreLine(s)}</td>
         <td><span class="pill ${esc(p.veredicto||"evaluar")}">${esc(p.veredicto||"evaluar")}</span></td>
-        <td><button class="iconbtn" title="Eliminar" onclick="event.stopPropagation();borrarProducto('${p.id}')">🗑</button></td>
+        <td class="acciones" onclick="event.stopPropagation()">
+          ${p.url
+            ? `<a class="accbtn" href="${esc(p.url)}" target="_blank" rel="noopener" title="Abrir el producto">${ICO.link}</a>`
+            : `<span class="accbtn off" title="Sin link del producto — cargalo dentro del producto">${ICO.link}</span>`}
+          ${waLink(p)
+            ? `<a class="accbtn wa" href="${esc(waLink(p))}" target="_blank" rel="noopener" title="WhatsApp con ${esc(p.proveedor||"el proveedor")}">${ICO.wa}</a>`
+            : `<span class="accbtn off" title="Sin WhatsApp — cargá el teléfono dentro del producto">${ICO.wa}</span>`}
+          <button class="accbtn del" title="Eliminar" onclick="borrarProducto('${p.id}')">${ICO.tacho}</button>
+        </td>
       </tr>`;}).join("")}</tbody>
   </table></div>
   <p class="hintline" style="margin-top:10px">${ps.length} producto${ps.length===1?"":"s"} · Costo puesto = costo × multiplicador, activable por producto (defecto ×${settings.mult}). Tocá una fila para editar.</p>
@@ -319,7 +358,7 @@ function setSort(k){
 function openModal(id){
   const p = id ? state.productos.find(x=>x.id===id) : null;
   state.editing = p ? {...p, crit:{...p.crit}, tags:[...(p.tags||[])], competidores:(p.competidores||[]).map(c=>({...c}))}
-                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"",
+                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"", whatsapp:"",
                         tipoProv:"Mayorista local", origen:"Argentina (importador)",
                         fob:"", venta:"", moq:"", competidores:[], veredicto:"evaluar", notas:"",
                         aplicaMult:true, mult:settings.mult,
@@ -385,6 +424,14 @@ function renderModal(){
       <label>Link del producto</label>
       <input class="input" data-f="url" value="${esc(e.url||"")}" placeholder="https://… la ficha exacta del producto">
       <div class="hintline">La publicación puntual. Es el que abrís desde la tabla.</div>
+    </div></div>
+
+    <div class="frow one"><div class="field">
+      <label>WhatsApp del proveedor</label>
+      <input class="input" data-f="whatsapp" value="${esc(e.whatsapp||"")}" placeholder="11 6506-6097">
+      <div class="hintline" id="waHint">${e.whatsapp
+        ? (waNumero(e.whatsapp) ? `Abre wa.me/${waNumero(e.whatsapp)} con el mensaje ya escrito` : "No pude leer el número")
+        : "Se asume Argentina. Para otro país, escribilo con + adelante."}</div>
     </div></div>
 
     <div class="frow one"><div class="field">
@@ -455,6 +502,12 @@ function renderModal(){
     el.oninput = el.onchange = ()=>{
       e[el.dataset.f] = el.value;
       if(["fob","venta"].includes(el.dataset.f)) refreshScore(); // in-place: no perder el foco
+      if(el.dataset.f === "whatsapp"){
+        const h = $("#waHint");
+        if(h) h.textContent = e.whatsapp
+          ? (waNumero(e.whatsapp) ? `Abre wa.me/${waNumero(e.whatsapp)} con el mensaje ya escrito` : "No pude leer el número")
+          : "Se asume Argentina. Para otro país, escribilo con + adelante.";
+      }
     };
   });
   $$("[data-c]",$("#modalBody")).forEach(el=>{

@@ -24,7 +24,10 @@ Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache
 
 ## Qué hace
 - **Dashboard** — KPIs, top de categorías por score, ranking de productos, recomendación al azar.
-- **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos. El nombre abre el link directo del producto (↗) cuando lo cargaste; el de la columna Proveedor va al sitio del proveedor.
+- **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos. Cada fila termina en tres botones: **abrir el producto**, **WhatsApp con el proveedor** (con el mensaje ya escrito) y **eliminar**. Los dos primeros quedan apagados hasta que cargues el dato.
+
+### WhatsApp
+Cargá el teléfono en el producto. Se asume Argentina: se limpian el 0 de área y el 15, y se antepone 549. Para otro país escribilo con `+` adelante y se respeta tal cual. El mensaje que abre ya trae las dos preguntas obligatorias: precio mayorista, mínimo de compra y factura A.
 - **Rubros** — score promedio y estrellas por categoría.
 - **Proveedores** — los relevados, con link. Marca cuáles ya estás usando.
 - **Nichos** — mascotas / cocina / auto, con ancla, satélites y recompra.
