@@ -46,6 +46,8 @@ git add -A && git commit -m "..." && git push
 Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache viejo.
 
 ## Qué hace
+Barra lateral fija con búsqueda global arriba: escribís una vez y busca a la vez en productos, rubros, proveedores, los tuyos y tiendas.
+
 - **Dashboard** — 🔥 **Caliente de hoy** (candidato distinto cada día, con su score, rubro y dónde buscarlo), KPIs, top de categorías, ranking y recomendación al azar.
 - **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos. Cada fila termina en tres botones: **abrir el producto**, **WhatsApp con el proveedor** (con el mensaje ya escrito) y **eliminar**. Los dos primeros quedan apagados hasta que cargues el dato.
 
@@ -58,7 +60,9 @@ Cada rubro abre sus fuentes en este orden: **primero Argentina** (Mercado Libre 
 
 ### País del proveedor
 Va con bandera bajo el nombre en la tabla, y hay filtro por país. **No es lo mismo que el origen de la mercadería**: un mayorista colombiano vende producto chino. Cuando difieren, la tabla aclara "llega de …".
-- **Nichos** — mascotas / cocina / auto, con ancla, satélites y recompra.
+- **Cotizaciones** — el pedido a cada proveedor, con precio, mínimo, plazo, si factura y en cuántos días respondió. Acá el costo deja de ser estimación y pasa a ser dato: a los 4 días sin respuesta te marca ⏰.
+- **Favoritos** — estrella en cualquier producto, rubro o proveedor.
+- **Nichos** — mapa de burbujas por oportunidad, más los nichos evaluados a fondo.
 
 ## Scoring (0-100)
 | Criterio | Peso |

@@ -1,10 +1,12 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v17";
+const APP_VER = "v18";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
+const FKEY = "radar-favoritos-v1";
+const CKEY = "radar-cotizaciones-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -17,11 +19,16 @@ const ICO = {
 
 const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-let settings = { mult: MULT_PUESTO };
-let seedVer  = 0;
-let misProv  = [];
+let settings  = { mult: MULT_PUESTO };
+let seedVer   = 0;
+let misProv   = [];   // proveedores propios, con tu calificación
+let favoritos = { productos:[], rubros:[], proveedores:[] };
+let cotiz     = [];   // pedidos de cotización
+let comentarios = {};
+let soloLectura = false;
+let yo = "";
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -36,6 +43,10 @@ function load(){
   try{
     const mp = localStorage.getItem(PKEY);
     if(mp) misProv = JSON.parse(mp) || [];
+    const ff = localStorage.getItem(FKEY);
+    if(ff) favoritos = {...favoritos, ...JSON.parse(ff)};
+    const cc = localStorage.getItem(CKEY);
+    if(cc) cotiz = JSON.parse(cc) || [];
     const tt = localStorage.getItem(TKEY);
     state.tiendas = tt ? (JSON.parse(tt)||[]) : TIENDAS_SEED.map(t=>({...t}));
   }catch(e){ state.tiendas = TIENDAS_SEED.map(t=>({...t})); }
@@ -125,6 +136,8 @@ function save(){
     localStorage.setItem(KEY, JSON.stringify(state.productos));
     localStorage.setItem(PKEY, JSON.stringify(misProv));
     localStorage.setItem(TKEY, JSON.stringify(state.tiendas));
+    localStorage.setItem(FKEY, JSON.stringify(favoritos));
+    localStorage.setItem(CKEY, JSON.stringify(cotiz));
     localStorage.setItem(SKEY, JSON.stringify({...settings, seedVer}));
   }catch(e){ toast("No se pudo guardar (almacenamiento lleno)"); }
 }
@@ -272,6 +285,45 @@ function scoreLine(s){
   return `<div class="scoreline"><div class="scorebar"><i style="width:${s}%;background:${scoreColor(s)}"></i></div>
     <b class="num" style="color:${scoreColor(s)};font-size:12.5px">${s}</b></div>`;
 }
+
+/* ================= FAVORITOS ================= */
+const esFav = (tipo, id) => (favoritos[tipo]||[]).includes(id);
+function toggleFav(tipo, id){
+  favoritos[tipo] ||= [];
+  const i = favoritos[tipo].indexOf(id);
+  i<0 ? favoritos[tipo].push(id) : favoritos[tipo].splice(i,1);
+  save(); render();
+}
+const totalFav = () => Object.values(favoritos).reduce((s,a)=>s+(a?a.length:0),0);
+const btnFav = (tipo,id) => `<button class="fav ${esFav(tipo,id)?"on":""}" title="Favorito"
+  onclick="event.stopPropagation();toggleFav('${tipo}','${String(id).replace(/'/g,"\\'")}')">${esFav(tipo,id)?"★":"☆"}</button>`;
+
+/* ================= COTIZACIONES ================= */
+/* El eslabón que faltaba: acá el costo deja de ser estimación y pasa a ser
+   un número que te pasó un proveedor. De ahí sale el margen real. */
+const ESTADOS_COT = ["pedida","respondida","descartada","cerrada"];
+
+function nuevaCotiz(datos){
+  cotiz.unshift({
+    id: uid(), fecha: new Date().toISOString(),
+    proveedor: datos.proveedor||"", rubro: datos.rubro||"", producto: datos.producto||"",
+    contacto: datos.contacto||"", estado:"pedida",
+    precio:"", minimo:"", plazo:"", factura:"", nota:""
+  });
+  save();
+}
+function borrarCotiz(id){
+  const c = cotiz.find(x=>x.id===id);
+  if(!c || !confirm(`¿Borrar la cotización a ${c.proveedor||"ese proveedor"}?`)) return;
+  cotiz = cotiz.filter(x=>x.id!==id); save(); render();
+}
+function campoCotiz(id,k,v){
+  const c = cotiz.find(x=>x.id===id); if(!c) return;
+  c[k]=v;
+  if(k==="precio" && v) c.estado = c.estado==="pedida" ? "respondida" : c.estado;
+  save();
+}
+const diasCot = f => Math.floor((Date.now()-new Date(f))/86400000);
 
 /* ================= ESPÍA DE TIENDAS ================= */
 /* Shopify publica el catálogo entero en /products.json. No hace falta token
@@ -459,7 +511,17 @@ function vDashboard(){
   const top = [...ps].sort((a,b)=>score(b)-score(a)).slice(0,5);
   const avgGlobal = ps.length ? Math.round(ps.reduce((s,p)=>s+score(p),0)/ps.length) : 0;
 
+  const provTot = DIRECTORIO.length + PROVEEDORES.filter(p=>p.pais==="Argentina").length;
   return `
+  <div class="numeros">
+    <div><b>${provTot}</b><span>proveedores</span></div>
+    <div><b>${RUBROS_META.length-1}</b><span>rubros</span></div>
+    <div><b>${CALIENTES.length}</b><span>candidatos</span></div>
+    <div><b>${ps.length}</b><span>tus productos</span></div>
+    <div><b style="color:var(--acc)">${cotiz.filter(c=>Number(c.precio)>0).length}</b><span>cotizados</span></div>
+    <div><b style="color:var(--star)">${totalFav()}</b><span>favoritos</span></div>
+  </div>
+
   <div class="section">${calienteHTML()}</div>
 
   <div class="section">
@@ -573,6 +635,7 @@ function vProductos(){
         <td class="num" style="color:${m==null?"var(--tx3)":m>=65?"var(--acc)":m>=45?"var(--warn)":"var(--bad)"}">${m==null?"—":m+"%"}</td>
         <td style="min-width:110px">${scoreLine(s)}</td>
         <td><span class="pill ${esc(p.veredicto||"evaluar")}">${esc(p.veredicto||"evaluar")}</span></td>
+        <td>${btnFav("productos",p.id)}</td>
         <td class="acciones" onclick="event.stopPropagation()">
           ${p.url
             ? `<a class="accbtn" href="${esc(p.url)}" target="_blank" rel="noopener" title="Abrir el producto">${ICO.link}</a>`
@@ -674,6 +737,7 @@ function vRubros(){
           <h3>${esc(f.n)}</h3>
           <div class="rubro-sub">${esc(f.cat)} · <span style="color:${COLOR_TEND[f.tend]}">${FLECHA_TEND[f.tend]} ${f.tend}</span>${mio?` · <b style="color:var(--acc)">${mio.n} tuyo${mio.n===1?"":"s"}</b>`:""}</div>
         </div>
+        ${btnFav("rubros",f.n)}
         <div class="rubro-nums">
           <div class="rubro-margen"><b style="color:${colorMargen(f.margen)}">${f.margen}%</b><span>margen</span></div>
           <div class="rubro-op"><b style="color:${cOp}">${op}</b><span>oport.</span></div>
@@ -735,6 +799,8 @@ function panelRubro(f){
       </div>
       <a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
       ${p.whatsapp?`<a class="accbtn wa" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">${ICO.wa}</a>`:""}
+      <button class="accbtn" title="Pedirle cotización"
+        onclick='formCotiz(${JSON.stringify({proveedor:p.n,rubro:f.n}).replace(/'/g,"&#39;")})'>◍</button>
       <button class="accbtn" title="Sumarlo a mis proveedores"
         onclick='sumarProveedor(${JSON.stringify({n:p.n,pais:"Argentina",clase:p.tipo,url:p.url,rubro:f.n}).replace(/'/g,"&#39;")})'>+</button>
     </div>`;
@@ -1118,9 +1184,182 @@ function sumarDesdeTienda(p){
   renderModal();
 }
 
+/* ================= COTIZACIONES (vista) ================= */
+function vCotizaciones(){
+  const q=(state.qCot||"").toLowerCase();
+  const lista = cotiz.filter(c=>
+    (!state.fEstadoCot || c.estado===state.fEstadoCot) &&
+    (!q || (c.proveedor+" "+c.producto+" "+c.rubro+" "+c.nota).toLowerCase().includes(q)));
+  const n = e => cotiz.filter(c=>c.estado===e).length;
+  const conPrecio = cotiz.filter(c=>Number(c.precio)>0);
+
+  return `
+  <div class="section-h"><h2>Cotizaciones</h2>
+    <span class="hint">acá el costo deja de ser una estimación mía y pasa a ser el número que te pasó un proveedor</span></div>
+
+  <div class="numeros">
+    <div><b>${cotiz.length}</b><span>pedidas</span></div>
+    <div><b style="color:var(--warn)">${n("pedida")}</b><span>esperando</span></div>
+    <div><b style="color:var(--acc)">${n("respondida")}</b><span>respondidas</span></div>
+    <div><b>${conPrecio.length}</b><span>con precio</span></div>
+    <div><b style="color:var(--tx3)">${n("descartada")}</b><span>descartadas</span></div>
+  </div>
+
+  <div class="toolbar">
+    <input class="input" id="qCot" placeholder="Buscar proveedor o producto…" value="${esc(state.qCot||"")}">
+    <select class="input" id="fEstadoCot">
+      <option value="">Todos los estados</option>
+      ${ESTADOS_COT.map(e=>`<option value="${e}" ${e===state.fEstadoCot?"selected":""}>${e}</option>`).join("")}
+    </select>
+    <button class="btn primary" id="btnNuevaCot">+ Pedir cotización</button>
+  </div>
+
+  ${lista.length ? `
+  <div class="tablewrap"><table>
+    <thead><tr>
+      <th>Proveedor</th><th>Producto</th><th class="num">Precio US$</th><th class="num">Mínimo</th>
+      <th>Plazo</th><th>Factura</th><th>Estado</th><th>Días</th><th></th>
+    </tr></thead>
+    <tbody>${lista.map(c=>{
+      const d = diasCot(c.fecha);
+      const tarde = c.estado==="pedida" && d>=4;
+      return `<tr>
+        <td><div class="pname">${esc(c.proveedor||"—")}</div>
+            <div class="psub">${esc(c.rubro||"")}${c.contacto?` · ${esc(c.contacto)}`:""}</div></td>
+        <td style="color:var(--tx2)">${esc(c.producto||"—")}</td>
+        <td class="num"><input class="input mini" type="number" step="0.01" value="${esc(c.precio)}"
+              onchange="campoCotiz('${c.id}','precio',this.value);render()"></td>
+        <td class="num"><input class="input mini" value="${esc(c.minimo)}" placeholder="50 u."
+              onchange="campoCotiz('${c.id}','minimo',this.value)"></td>
+        <td><input class="input mini" value="${esc(c.plazo)}" placeholder="15 días"
+              onchange="campoCotiz('${c.id}','plazo',this.value)"></td>
+        <td><select class="input mini" onchange="campoCotiz('${c.id}','factura',this.value)">
+              ${["","A","B","no factura"].map(f=>`<option ${f===c.factura?"selected":""}>${f}</option>`).join("")}
+            </select></td>
+        <td><select class="input mini" onchange="campoCotiz('${c.id}','estado',this.value);render()">
+              ${ESTADOS_COT.map(e=>`<option ${e===c.estado?"selected":""}>${e}</option>`).join("")}
+            </select></td>
+        <td class="num" style="color:${tarde?"var(--warn)":"var(--tx3)"}">${d}${tarde?" ⏰":""}</td>
+        <td><button class="accbtn del" onclick="borrarCotiz('${c.id}')">${ICO.tacho}</button></td>
+      </tr>`;}).join("")}</tbody>
+  </table></div>
+  <p class="hintline" style="margin-top:10px">Al cargar el precio pasa sola a «respondida». A los 4 días sin respuesta te avisa con ⏰ — ahí conviene insistir.</p>
+  ` : `<div class="empty"><div class="big">◍</div>
+      Ninguna cotización todavía.<br>
+      <span class="hintline">Pedí una desde acá, o desde el botón de WhatsApp de cualquier proveedor.</span></div>`}`;
+}
+
+function formCotiz(pre){
+  const p = pre || {};
+  const proveedor = p.proveedor || prompt("¿A qué proveedor le pedís?");
+  if(!proveedor) return;
+  const producto = p.producto || prompt("¿Por qué producto?") || "";
+  nuevaCotiz({ proveedor, producto, rubro:p.rubro||"", contacto:p.contacto||"" });
+  state.view="cotizaciones"; render();
+  toast("Cotización anotada");
+}
+
+/* ================= FAVORITOS (vista) ================= */
+function vFavoritos(){
+  const prods = state.productos.filter(p=>esFav("productos",p.id));
+  const rubs  = RUBROS_META.filter(r=>esFav("rubros",r.n));
+  const provs = DIRECTORIO.filter(p=>esFav("proveedores",p.n));
+  if(!prods.length && !rubs.length && !provs.length)
+    return `<div class="empty"><div class="big">★</div>
+      Todavía no marcaste favoritos.<br>
+      <span class="hintline">Tocá la estrella en cualquier producto, rubro o proveedor.</span></div>`;
+  return `
+  <div class="section-h"><h2>Favoritos</h2><span class="hint">lo que marcaste para tener a mano</span></div>
+  ${rubs.length?`<div class="bloque"><div class="bloque-h"><h3>◈ Rubros</h3></div>
+    <div class="cardgrid">${rubs.map(r=>`
+      <div class="minicard" onclick="irARubro('${esc(r.n).replace(/'/g,"\\'")}')" style="cursor:pointer">
+        <h3>${IC_MACRO[r.cat]||""} ${esc(r.n)} ${btnFav("rubros",r.n)}</h3>
+        <div class="meta">margen <b style="color:${colorMargen(r.margen)}">${r.margen}%</b> · oportunidad ${oportunidad(r.n)}</div>
+        <p>${esc(r.nota)}</p>
+      </div>`).join("")}</div></div>`:""}
+  ${prods.length?`<div class="bloque"><div class="bloque-h"><h3>◧ Productos</h3></div>
+    <div class="cardgrid">${prods.map(p=>`
+      <div class="minicard" onclick="openModal('${p.id}')" style="cursor:pointer">
+        <h3>${esc(p.nombre)} ${btnFav("productos",p.id)}</h3>
+        <div class="meta">${esc(p.rubro)} · score ${score(p)}</div>
+      </div>`).join("")}</div></div>`:""}
+  ${provs.length?`<div class="bloque"><div class="bloque-h"><h3>◑ Proveedores</h3></div>
+    <div class="cardgrid">${provs.map(p=>`
+      <div class="minicard">
+        <h3><span class="bandera bandera-lg">🇦🇷</span>${esc(p.n)} ${btnFav("proveedores",p.n)}</h3>
+        <div class="meta">${esc(p.tipo)} · ${esc(p.zona)}</div>
+        <p>${esc(p.nota)}</p>
+        <p style="margin-top:9px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a></p>
+      </div>`).join("")}</div></div>`:""}`;
+}
+
+/* ================= BÚSQUEDA GLOBAL ================= */
+function buscarTodo(q){
+  const s=q.toLowerCase().trim();
+  if(s.length<2) return null;
+  const cabe = (...xs)=>xs.join(" ").toLowerCase().includes(s);
+  return {
+    productos: state.productos.filter(p=>cabe(p.nombre,p.rubro,p.proveedor,p.notas||"")).slice(0,6),
+    rubros: RUBROS_META.filter(r=>r.n!=="Otro" && cabe(r.n,r.cat,r.nota)).slice(0,6),
+    proveedores: DIRECTORIO.filter(p=>cabe(p.n,p.nota,p.tipo,p.zona,p.rubros.join(" "))).slice(0,6),
+    mios: misProv.filter(p=>cabe(p.n,p.rubro||"")).slice(0,4),
+    tiendas: state.tiendas.filter(t=>cabe(t.nombre,t.url)).slice(0,3)
+  };
+}
+
+function pintarBusqueda(){
+  const caja=$("#resGlobal"); if(!caja) return;
+  const q=state.qGlobal||"";
+  const btn=$("#limpiarQ"); if(btn) btn.hidden = !q;
+  if(q.trim().length<2){ caja.hidden=true; caja.innerHTML=""; return; }
+  const r=buscarTodo(q);
+  const total=Object.values(r).reduce((s,a)=>s+a.length,0);
+  if(!total){
+    caja.hidden=false;
+    caja.innerHTML=`<p class="hintline">Nada con “${esc(q)}”.</p>`;
+    return;
+  }
+  const grupo=(tit,items,fn)=> items.length ? `
+    <div class="rg-grupo"><div class="rg-tit">${tit} · ${items.length}</div>${items.map(fn).join("")}</div>` : "";
+  caja.hidden=false;
+  caja.innerHTML =
+    grupo("Productos", r.productos, p=>`
+      <div class="rg-item" onclick="cerrarBusqueda();openModal('${p.id}')">
+        ${fotoHTML(p)}<div class="rg-txt"><b>${esc(p.nombre)}</b><span>${esc(p.rubro)}</span></div>
+        <span class="rg-tag">score ${score(p)}</span></div>`) +
+    grupo("Rubros", r.rubros, x=>`
+      <div class="rg-item" onclick="cerrarBusqueda();irARubro('${esc(x.n).replace(/'/g,"\\'")}')">
+        <span class="rubro-ic" style="--tono:${tono(x.cat)};width:34px;height:34px;font-size:16px">${IC_MACRO[x.cat]||"📦"}</span>
+        <div class="rg-txt"><b>${esc(x.n)}</b><span>${esc(x.cat)}</span></div>
+        <span class="rg-tag" style="color:${colorMargen(x.margen)}">${x.margen}% margen</span></div>`) +
+    grupo("Proveedores", r.proveedores, p=>`
+      <div class="rg-item" onclick="cerrarBusqueda();window.open('${esc(p.url)}','_blank')">
+        <span class="rubro-ic" style="--tono:150;width:34px;height:34px;font-size:15px">🏢</span>
+        <div class="rg-txt"><b>${esc(p.n)}</b><span>${esc(p.tipo)} · ${esc(p.zona)}</span></div>
+        <span class="rg-tag">${esc(p.rubros[0]||"")}</span></div>`) +
+    grupo("Tuyos", r.mios, p=>`
+      <div class="rg-item" onclick="cerrarBusqueda();state.view='proveedores';render()">
+        <span class="rubro-ic" style="--tono:45;width:34px;height:34px;font-size:15px">⭐</span>
+        <div class="rg-txt"><b>${esc(p.n)}</b><span>${esc(p.rubro||"")}</span></div>
+        <span class="rg-tag">${p.rating}★</span></div>`) +
+    grupo("Tiendas", r.tiendas, t=>`
+      <div class="rg-item" onclick="cerrarBusqueda();state.view='tiendas';render();pintarTiendas()">
+        <span class="rubro-ic" style="--tono:200;width:34px;height:34px;font-size:15px">◎</span>
+        <div class="rg-txt"><b>${esc(t.nombre)}</b><span>${esc(t.url)}</span></div></div>`);
+}
+function cerrarBusqueda(){
+  state.qGlobal="";
+  const i=$("#qGlobal"); if(i) i.value="";
+  pintarBusqueda();
+}
+
 /* ================= RENDER ================= */
 function render(){
-  $$(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===state.view));
+  instalarHandlersEstrellas();
+  $$(".snav[data-view]").forEach(t=>t.classList.toggle("active", t.dataset.view===state.view));
+  ["btnNuevo"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden = soloLectura; });
+  const cf=$("#cuentaFav"); if(cf) cf.textContent = totalFav() || "";
+  const vp=$("#verPie");    if(vp) vp.textContent = APP_VER;
   const v = state.view;
   /* Si una vista falla, se muestra el error en su lugar: una excepción no puede
      dejar la app entera en blanco. */
@@ -1129,6 +1368,8 @@ function render(){
       v==="dashboard"   ? vDashboard()
     : v==="productos"   ? vProductos()
     : v==="rubros"      ? vRubros()
+    : v==="cotizaciones"? vCotizaciones()
+    : v==="favoritos"   ? vFavoritos()
     : v==="tiendas"     ? vTiendas()
     : v==="proveedores" ? vProveedores()
     :                     vNichos();
@@ -1153,6 +1394,12 @@ function render(){
     $("#btnAddTienda").onclick = ()=>{ agregarTienda(inp.value); inp.value=""; };
     inp.onkeydown = e=>{ if(e.key==="Enter"){ agregarTienda(inp.value); inp.value=""; } };
     $("#btnRefrescarT").onclick = ()=>{ tiendaCache.clear(); render(); pintarTiendas(); toast("Actualizando…"); };
+  }
+  if(v==="cotizaciones"){
+    const q=$("#qCot");
+    if(q) q.oninput=e=>{ state.qCot=e.target.value; render(); const n=$("#qCot"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); };
+    const fe=$("#fEstadoCot"); if(fe) fe.onchange=e=>{ state.fEstadoCot=e.target.value; render(); };
+    const nb=$("#btnNuevaCot"); if(nb) nb.onclick=()=>formCotiz();
   }
   if(v==="proveedores"){
     const q=$("#qDir");
@@ -1637,7 +1884,26 @@ function nuevoDesdeReco(){
 load();
 render();
 
-$$(".tab").forEach(t=> t.onclick = ()=>{ state.view=t.dataset.view; render(); });
+$$(".snav[data-view]").forEach(t=> t.onclick = ()=>{
+  state.view = t.dataset.view;
+  cerrarBusqueda();
+  render();
+  $("#side").classList.remove("abierta");
+  window.scrollTo(0,0);
+});
+
+/* menú lateral en pantallas chicas */
+$("#abrirSide").onclick  = e=>{ e.stopPropagation(); $("#side").classList.add("abierta"); };
+$("#cerrarSide").onclick = ()=> $("#side").classList.remove("abierta");
+document.addEventListener("click", e=>{
+  const side = $("#side");
+  if(side.classList.contains("abierta") && !side.contains(e.target)) side.classList.remove("abierta");
+});
+
+/* búsqueda global */
+$("#qGlobal").oninput   = e=>{ state.qGlobal = e.target.value; pintarBusqueda(); };
+$("#qGlobal").onkeydown = e=>{ if(e.key==="Escape") cerrarBusqueda(); };
+$("#limpiarQ").onclick  = ()=>{ cerrarBusqueda(); $("#qGlobal").focus(); };
 $("#btnNuevo").onclick  = ()=> openModal(null);
 $("#btnSave").onclick   = saveProducto;
 $("#btnCancel").onclick = closeModal;

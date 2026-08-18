@@ -21,38 +21,63 @@
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="logo">◎</span>
-    <div>
-      <h1>Radar de Productos</h1>
-      <p class="sub">Winners, clavos y todo lo que hay en el medio</p>
+<div class="layout">
+
+  <aside class="side" id="side">
+    <div class="side-marca">
+      <span class="logo">◎</span>
+      <div>
+        <h1>Radar</h1>
+        <p class="sub">de Productos</p>
+      </div>
+      <button class="iconbtn solo-movil" id="cerrarSide" aria-label="Cerrar menú">✕</button>
     </div>
-  </div>
-  <div class="topactions">
-    <span class="temas" role="group" aria-label="Tema">
-      <button data-tema="light" title="Claro">☀</button>
-      <button data-tema="soft"  title="Oscuro suave">◐</button>
-      <button data-tema="dark"  title="Oscuro">☾</button>
-    </span>
-    <button class="btn ghost" id="btnInstalar" hidden>⤓ Instalar</button>
-    <button class="btn ghost" id="btnRandom">🎲 Tirame uno</button>
-    <button class="btn ghost" id="btnExport">↧ Exportar</button>
-    <button class="btn ghost" id="btnImport">↥ Importar</button>
-    <button class="btn primary" id="btnNuevo">+ Producto</button>
-  </div>
-</header>
 
-<nav class="tabs">
-  <button class="tab active" data-view="dashboard">Dashboard</button>
-  <button class="tab" data-view="productos">Productos</button>
-  <button class="tab" data-view="rubros">Rubros</button>
-  <button class="tab" data-view="tiendas">Tiendas</button>
-  <button class="tab" data-view="proveedores">Proveedores</button>
-  <button class="tab" data-view="nichos">Nichos</button>
-</nav>
+    <nav class="side-nav">
+      <div class="side-tit">Explorar</div>
+      <button class="snav active" data-view="dashboard"><i>◱</i>Inicio</button>
+      <button class="snav" data-view="productos"><i>◧</i>Productos</button>
+      <button class="snav" data-view="rubros"><i>◈</i>Rubros</button>
+      <button class="snav" data-view="proveedores"><i>◑</i>Proveedores</button>
+      <button class="snav" data-view="cotizaciones"><i>◍</i>Cotizaciones<span class="nuevo">Nuevo</span></button>
+      <button class="snav" data-view="tiendas"><i>◎</i>Tiendas</button>
+      <button class="snav" data-view="nichos"><i>◉</i>Nichos</button>
+      <button class="snav" data-view="favoritos"><i>★</i>Favoritos<span class="cuenta" id="cuentaFav"></span></button>
 
-<main id="app"></main>
+      <div class="side-tit">Cuenta</div>
+      <button class="snav" id="btnYo"><i>☺</i><span id="yoNombre">¿Quién sos?</span></button>
+      <button class="snav" id="btnExport"><i>↧</i>Exportar</button>
+      <button class="snav" id="btnImport"><i>↥</i>Importar</button>
+      <button class="snav" id="btnInstalar" hidden><i>⤓</i>Instalar</button>
+    </nav>
+
+    <div class="side-pie">
+      <span class="temas" role="group" aria-label="Tema">
+        <button data-tema="light" title="Claro">☀</button>
+        <button data-tema="soft"  title="Oscuro suave">◐</button>
+        <button data-tema="dark"  title="Oscuro">☾</button>
+      </span>
+      <span class="ver" id="verPie"></span>
+    </div>
+  </aside>
+
+  <div class="cuerpo">
+    <header class="barra">
+      <button class="iconbtn solo-movil" id="abrirSide" aria-label="Abrir menú">☰</button>
+      <div class="buscador">
+        <span class="lupa">⌕</span>
+        <input id="qGlobal" placeholder="Buscar producto, rubro, proveedor o tienda…" autocomplete="off">
+        <button class="iconbtn" id="limpiarQ" hidden aria-label="Limpiar">✕</button>
+      </div>
+      <button class="btn ghost" id="btnRandom">🎲 Tirame uno</button>
+      <button class="btn primary" id="btnNuevo">+ Producto</button>
+    </header>
+
+    <div id="resGlobal" class="resglobal" hidden></div>
+
+    <main id="app"></main>
+  </div>
+</div>
 
 <!-- Modal producto -->
 <div class="modal-back" id="modalBack" hidden>
