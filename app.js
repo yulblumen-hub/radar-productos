@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v15";
+const APP_VER = "v16";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -21,7 +21,7 @@ let settings = { mult: MULT_PUESTO };
 let seedVer  = 0;
 let misProv  = [];
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -848,6 +848,36 @@ function vProveedores(){
 
   <div class="bloque">
     <div class="bloque-h">
+      <h3>🏢 Directorio argentino</h3>
+      <span class="hint">${DIRECTORIO.length} relevados y verificados · filtrá por categoría</span>
+    </div>
+    <div class="toolbar">
+      <input class="input" id="qDir" placeholder="Buscar proveedor…" value="${esc(state.qDir||"")}">
+      <select class="input" id="fDirCat">
+        <option value="">Todas las categorías</option>
+        ${MACROS.filter(c=>DIRECTORIO.some(p=>p.rubros.includes(c))).map(c=>
+          `<option value="${esc(c)}" ${c===state.fDirCat?"selected":""}>${IC_MACRO[c]||""} ${esc(c)} (${DIRECTORIO.filter(p=>p.rubros.includes(c)).length})</option>`).join("")}
+      </select>
+    </div>
+    ${(()=>{
+      const q=(state.qDir||"").toLowerCase();
+      const lista = DIRECTORIO.filter(p=>
+        (!state.fDirCat || p.rubros.includes(state.fDirCat)) &&
+        (!q || (p.n+" "+p.nota+" "+p.tipo+" "+p.zona+" "+p.rubros.join(" ")).toLowerCase().includes(q)));
+      if(!lista.length) return `<div class="empty">Ninguno con ese filtro.</div>`;
+      return `<div class="cardgrid">${lista.map(p=>`
+        <div class="minicard">
+          <h3><span class="bandera bandera-lg">🇦🇷</span>${esc(p.n)}</h3>
+          <div class="meta">${esc(p.tipo)} · ${esc(p.zona)}</div>
+          <p>${esc(p.nota)}</p>
+          <p style="margin-top:8px">${p.rubros.map(r=>`<span class="tag">${IC_MACRO[r]||""} ${esc(r)}</span>`).join("")}</p>
+          <p style="margin-top:9px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a></p>
+        </div>`).join("")}</div>`;
+    })()}
+  </div>
+
+  <div class="bloque">
+    <div class="bloque-h">
       <h3>⭐ Mis proveedores</h3>
       <span class="hint">${misProv.length} guardado${misProv.length===1?"":"s"} · calificalos cuando cotices y el mejor se propone solo en el producto</span>
     </div>
@@ -1123,6 +1153,11 @@ function render(){
     $("#btnAddTienda").onclick = ()=>{ agregarTienda(inp.value); inp.value=""; };
     inp.onkeydown = e=>{ if(e.key==="Enter"){ agregarTienda(inp.value); inp.value=""; } };
     $("#btnRefrescarT").onclick = ()=>{ tiendaCache.clear(); render(); pintarTiendas(); toast("Actualizando…"); };
+  }
+  if(v==="proveedores"){
+    const q=$("#qDir");
+    if(q) q.oninput=e=>{ state.qDir=e.target.value; render(); const n=$("#qDir"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); };
+    const fc=$("#fDirCat"); if(fc) fc.onchange=e=>{ state.fDirCat=e.target.value; render(); };
   }
   if(v==="rubros"){
     const q=$("#qRubro");
