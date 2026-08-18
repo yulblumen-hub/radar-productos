@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v7";
+const APP_VER = "v8";
 const KEY  = "radar-productos-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
@@ -16,6 +16,7 @@ const ICO = {
 const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 let settings = { mult: MULT_PUESTO };
+let seedVer  = 0;
 
 let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", sort:{k:"score",dir:-1}, editing:null };
 
@@ -23,17 +24,44 @@ let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fP
 function load(){
   try{
     const st = localStorage.getItem(SKEY);
-    if(st) settings = {...settings, ...JSON.parse(st)};
+    if(st){
+      const s = JSON.parse(st);
+      settings = {...settings, ...s};
+      seedVer  = s.seedVer || 0;
+    }
   }catch(e){ /* settings por defecto */ }
   try{
     const raw = localStorage.getItem(KEY);
-    if(raw){ state.productos = JSON.parse(raw).map(migrar); return; }
+    if(raw){
+      state.productos = JSON.parse(raw).map(migrar);
+      refrescarSeed();
+      return;
+    }
   }catch(e){ console.warn("localStorage ilegible",e); }
   state.productos = SEED.map(p=>migrar({...p}));
+  seedVer = SEED_VER;
   save();
 }
 
 /* productos viejos: el multiplicador estaba atado al origen. Ahora es un switch propio. */
+/* Los productos de ejemplo se guardan en el navegador la primera vez, así que
+   una corrección posterior nunca llegaba. Ahora los que no tocaste se
+   actualizan solos; los que editaste quedan intactos. */
+function refrescarSeed(){
+  if(seedVer >= SEED_VER) return;
+  let n = 0;
+  SEED.forEach(orig=>{
+    const i = state.productos.findIndex(p=>p.id === orig.id);
+    if(i < 0) return;
+    if(state.productos[i].editado) return;      // lo tocaste vos: no se pisa
+    state.productos[i] = migrar({...orig});
+    n++;
+  });
+  seedVer = SEED_VER;
+  save();
+  if(n) setTimeout(()=>toast(`${n} producto${n===1?"":"s"} de ejemplo actualizado${n===1?"":"s"}`), 400);
+}
+
 function migrar(p){
   if(p.aplicaMult === undefined) p.aplicaMult = (p.origen === "China");
   if(p.mult === undefined || p.mult === "") p.mult = MULT_PUESTO;
@@ -42,7 +70,7 @@ function migrar(p){
 function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify(state.productos));
-    localStorage.setItem(SKEY, JSON.stringify(settings));
+    localStorage.setItem(SKEY, JSON.stringify({...settings, seedVer}));
   }catch(e){ toast("No se pudo guardar (almacenamiento lleno)"); }
 }
 
@@ -569,6 +597,7 @@ function saveProducto(){
   ["fob","venta","moq"].forEach(k=> e[k] = e[k]==="" ? "" : Number(e[k]));
   e.mult = Number(e.mult) || settings.mult;
   if(e.id){
+    e.editado = true;                      // a partir de acá es tuyo, no se pisa
     const i = state.productos.findIndex(p=>p.id===e.id);
     state.productos[i] = e;
   }else{

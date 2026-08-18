@@ -56,6 +56,9 @@ Veredicto sugerido: ≥75 estrella · ≥58 potencial · ≥42 evaluar · <42 cl
 
 El valor por defecto (×2.2) se cambia desde la barra de la vista Productos y lo heredan los productos nuevos. Los productos ya cargados migran solos: los de origen China arrancan con el switch encendido, el resto apagado.
 
+## Productos de ejemplo
+Se guardan en el navegador la primera vez. Para que una corrección posterior llegue, `SEED_VER` en `data.js` se sube y al abrir la app se refrescan **solo los que no editaste** — los que tocaste quedan como los dejaste (llevan `editado: true`).
+
 ## Eliminar
 Desde el ícono 🗑 de cada fila, o con el botón Eliminar dentro del producto. Ambos piden confirmación.
 

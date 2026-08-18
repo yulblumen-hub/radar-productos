@@ -128,6 +128,10 @@ const IDEAS = [
   { p:"Rodillo quitapelos con repuestos", r:"Mascotas", w:"El repuesto es la recompra. Modelo de maquinita y hojita." }
 ];
 
+/* Subir esto cuando se corrijan los productos de arranque: los que el usuario
+   no editó se refrescan solos, los que tocó quedan como los dejó. */
+const SEED_VER = 2;
+
 /* ---------- Productos de arranque ---------- */
 const SEED = [
   {
