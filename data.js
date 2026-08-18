@@ -195,6 +195,10 @@ const PROVEEDORES = [
     nota:"Más caro que 1688 pero en inglés y con proveedores acostumbrados a exportar." }
 ];
 
+/* Proxy propio a la API de Mercado Libre (carpeta worker/).
+   Vacío = la app funciona igual, sólo que con links en vez de datos. */
+const API_MERCADO = "";
+
 /* ---------- Plataformas (proveedores masivos) ----------
    No son fábricas: son buscadores de fábricas. El link se arma con el término
    del rubro, así que lleva a una búsqueda real, no a una home genérica. */

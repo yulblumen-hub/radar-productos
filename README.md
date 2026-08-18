@@ -7,6 +7,13 @@ App para relevar y puntuar productos antes de comprar stock.
 ## Correr
 Abrí `index.html` en el navegador, o entrá al link de arriba. No necesita servidor.
 
+## Datos de mercado (Mercado Libre)
+La API de Mercado Libre dejó de ser pública en 2024/25: hoy todo pide token OAuth, que no puede vivir en una página estática. Por eso hay un proxy propio en [`worker/`](worker/) que corre gratis en Cloudflare.
+
+Con el worker conectado, cada producto y cada rubro muestran cuántas publicaciones compiten, el precio mínimo, típico y máximo, cuántas van con envío gratis y las principales publicaciones.
+
+**Sin worker la app anda igual**, sólo que con links a la búsqueda en vez de datos. Para conectarlo, seguí [`worker/README.md`](worker/README.md) y pegá la URL en `API_MERCADO` (`data.js`).
+
 ## Autocompletado
 Pegá el link del producto y se completan solos proveedor, país, tipo, origen y WhatsApp a partir del dominio, más el nombre desde la URL. Nunca pisa lo que ya cargaste a mano. Los dominios conocidos están en `DOMINIOS` (`data.js`) — sumá los tuyos ahí.
 

@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v10";
+const APP_VER = "v11";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const SKEY = "radar-settings-v1";
@@ -253,6 +253,66 @@ const money = n => (n||n===0) ? "US$ "+Number(n).toLocaleString("es-AR",{maximum
 function scoreLine(s){
   return `<div class="scoreline"><div class="scorebar"><i style="width:${s}%;background:${scoreColor(s)}"></i></div>
     <b class="num" style="color:${scoreColor(s)};font-size:12.5px">${s}</b></div>`;
+}
+
+/* ================= DATOS DE MERCADO ================= */
+/* Le pega al worker (worker/). Sin worker configurado no rompe nada:
+   la app sigue mostrando los links de búsqueda de siempre. */
+const mercadoCache = new Map();
+
+const hayMercado = () => typeof API_MERCADO === "string" && API_MERCADO.length > 8;
+
+async function traerMercado(q){
+  if(!hayMercado() || !q) return null;
+  const clave = q.toLowerCase().trim();
+  if(mercadoCache.has(clave)) return mercadoCache.get(clave);
+  const prom = fetch(`${API_MERCADO}/buscar?q=${encodeURIComponent(q)}`)
+    .then(r=>r.ok ? r.json() : Promise.reject(new Error("HTTP "+r.status)))
+    .catch(e=>({ error: String(e.message||e) }));
+  mercadoCache.set(clave, prom);
+  return prom;
+}
+
+const pesos = n => (n||n===0)
+  ? "$ " + Number(n).toLocaleString("es-AR",{maximumFractionDigits:0})
+  : "—";
+
+function mercadoHTML(d){
+  if(!d) return "";
+  if(d.error) return `<p class="hintline">No pude leer el mercado: ${esc(d.error)}</p>`;
+  const sinVentas = !d.hayDatoDeVentas;
+  return `
+  <div class="mercado">
+    <div class="mk-kpis">
+      <div><b>${d.publicaciones ?? "—"}</b><span>compitiendo</span></div>
+      <div><b>${pesos(d.precioMin)}</b><span>más barato</span></div>
+      <div><b style="color:var(--acc)">${pesos(d.precioMediana)}</b><span>precio típico</span></div>
+      <div><b>${pesos(d.precioMax)}</b><span>más caro</span></div>
+      <div><b>${d.conEnvioGratis ?? "—"}/${d.muestra ?? "—"}</b><span>envío gratis</span></div>
+    </div>
+    ${d.top && d.top.length ? `
+      <div class="panel-h">${sinVentas ? "Primeros resultados" : "Los que más venden"}</div>
+      ${d.top.map(t=>`
+        <div class="mk-row">
+          <a href="${esc(t.link||"#")}" target="_blank" rel="noopener">${esc((t.titulo||"").slice(0,64))}</a>
+          <span class="mk-precio">${pesos(t.precio)}</span>
+          ${t.vendidos!=null?`<span class="mk-vend">${t.vendidos} vend.</span>`:""}
+          ${t.envioGratis?`<span class="tag">envío gratis</span>`:""}
+        </div>`).join("")}
+      ${sinVentas?`<p class="hintline">Mercado Libre no está devolviendo la cantidad vendida por publicación, así que el orden es el de su buscador, no por ventas.</p>`:""}
+    ` : ""}
+    <p class="hintline">Datos de Mercado Libre Argentina · ${esc((d.actualizado||"").slice(0,10))}</p>
+  </div>`;
+}
+
+/* Pinta el panel cuando llega la respuesta. */
+async function pintarMercado(sel, q){
+  const caja = document.querySelector(sel);
+  if(!caja || !hayMercado()) return;
+  caja.innerHTML = `<p class="hintline">Consultando Mercado Libre…</p>`;
+  const d = await traerMercado(q);
+  const sigue = document.querySelector(sel);
+  if(sigue) sigue.innerHTML = mercadoHTML(d);
 }
 
 /* ================= CALIENTE DEL DÍA ================= */
@@ -568,6 +628,7 @@ function panelRubro(f){
     <div class="panel-h">Dónde buscarlo <span class="hint">término: <code>${esc(f.term||f.n)}</code></span></div>
     ${provs.map(fila).join("")}
     <div class="panel-h">Competencia y precio de venta</div>
+    <div id="mkRubro-${esc(f.n).replace(/[^a-zA-Z0-9]/g,"")}"></div>
     ${comp.map(fila).join("")}
     ${dir.length?`<div class="panel-h">Proveedores verificados</div>
       ${dir.map(p=>`<div class="prov-row">
@@ -589,7 +650,11 @@ function instalarHandlersEstrellas(){
 }
 
 function setOrdenRubro(k){ state.rubroOrden=k; render(); }
-function abrirRubro(n){ state.rubroAbierto = (state.rubroAbierto===n ? null : n); render(); }
+function abrirRubro(n){
+  state.rubroAbierto = (state.rubroAbierto===n ? null : n);
+  render();
+  if(n && hayMercado()) pintarMercado("#mkRubro-"+n.replace(/[^a-zA-Z0-9]/g,""), n);
+}
 function verRubro(n){ state.view="productos"; state.fRubro=n; state.q=""; render(); }
 function nuevoEnRubro(n){ openModal(null); state.editing.rubro=n; renderModal(); }
 
@@ -937,6 +1002,15 @@ function renderModal(){
     </div></div>
 
     <div class="frow one"><div class="field">
+      <label>El mercado hoy</label>
+      <div id="mkProd">${hayMercado()
+        ? `<p class="hintline">Consultando Mercado Libre…</p>`
+        : `<div class="mercado vacio"><p class="hintline">Todavía no está conectada la API de Mercado Libre.
+             Mientras tanto: <a href="${esc(buscadoresDe(e.rubro||"Otro").find(b=>b.clase==="competencia").url)}" target="_blank" rel="noopener">ver la competencia a mano ↗</a>.
+             Para conectarla, seguí <code>worker/README.md</code>.</p></div>`}</div>
+    </div></div>
+
+    <div class="frow one"><div class="field">
       <label>Mejor proveedor para este rubro</label>
       <div id="mejorProv">${mejorProvHTML(e)}</div>
     </div></div>
@@ -1048,6 +1122,8 @@ function renderModal(){
   $$("[data-delcomp]",$("#modalBody")).forEach(el=>{
     el.onclick = ()=>{ e.competidores.splice(+el.dataset.delcomp,1); renderModal(); };
   });
+  if(hayMercado() && (e.nombre||"").trim().length>3) pintarMercado("#mkProd", e.nombre);
+
   const usarMejor = $("#usarMejor");
   if(usarMejor) usarMejor.onclick = ()=>{
     const m = mejorProveedor(e.rubro);

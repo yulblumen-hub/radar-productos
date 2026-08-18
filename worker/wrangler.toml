@@ -1,0 +1,10 @@
+name = "radar-ml"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+# El origen que puede llamar al worker. Cambialo si movés la app de dominio.
+ORIGEN_PERMITIDO = "https://yulblumen-hub.github.io"
+
+# ML_CLIENT_ID y ML_CLIENT_SECRET NO van acá.
+# Se cargan como secretos:  wrangler secret put ML_CLIENT_ID

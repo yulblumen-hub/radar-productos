@@ -1,3 +1,6 @@
 sync.sh
 artifact.html
 .DS_Store
+node_modules/
+.wrangler/
+.dev.vars
