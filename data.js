@@ -8,117 +8,117 @@
    La oportunidad es la diferencia entre las dos. Son estimaciones de mercado,
    no datos duros: sirven para priorizar, no para decidir solo con eso. */
 const RUBROS_META = [
-  { n:"Comederos y bebederos", cat:"Mascotas", explotado:55, proyeccion:88, tend:"subiendo", term:"宠物碗", nota:"Ancla clásica: problema visible y demo perfecta." },
-  { n:"Juguetes para perro", cat:"Mascotas", explotado:62, proyeccion:80, tend:"estable", term:"狗玩具", nota:"Recompra por desgaste. Cuidado con la calidad." },
-  { n:"Juguetes para gato", cat:"Mascotas", explotado:48, proyeccion:83, tend:"subiendo", term:"猫玩具", nota:"Menos saturado que perro y el dueño gasta igual." },
-  { n:"Cepillado y pelo de mascota", cat:"Mascotas", explotado:44, proyeccion:86, tend:"subiendo", term:"宠物梳", nota:"El antes/después es contenido viral asegurado." },
-  { n:"Correas y arneses", cat:"Mascotas", explotado:66, proyeccion:74, tend:"estable", term:"宠物牵引绳", nota:"Muy competido, pero el arnés antitirón todavía rinde." },
-  { n:"Higiene de mascota", cat:"Mascotas", explotado:40, proyeccion:82, tend:"subiendo", term:"宠物清洁", nota:"Bolsitas y toallitas: el motor de recompra del rubro." },
-  { n:"Transporte de mascota", cat:"Mascotas", explotado:42, proyeccion:78, tend:"subiendo", term:"宠物背包", nota:"Voluminoso: calcular el flete antes de enamorarse." },
-  { n:"Camas y descanso de mascota", cat:"Mascotas", explotado:58, proyeccion:70, tend:"estable", term:"宠物窝", nota:"Volumen alto, margen bajo por flete." },
-  { n:"Ropa para mascota", cat:"Mascotas", explotado:70, proyeccion:62, tend:"bajando", term:"宠物衣服", nota:"Tiene talles: el clavo del rubro." },
-  { n:"Fuentes de agua para gatos", cat:"Mascotas", explotado:35, proyeccion:84, tend:"subiendo", term:"猫饮水机", nota:"Nicho en crecimiento. Enchufa: revisar certificación." },
-  { n:"Masajeadores de cuello", cat:"Wellness", explotado:45, proyeccion:88, tend:"subiendo", term:"颈椎按摩器", nota:"Demo hipnótica, ticket alto, regalo perfecto." },
-  { n:"Pistolas de masaje", cat:"Wellness", explotado:52, proyeccion:82, tend:"estable", term:"筋膜枪", nota:"Costo bajo y ticket alto. Gimnasio y oficina." },
-  { n:"Difusores y humidificadores", cat:"Wellness", explotado:55, proyeccion:74, tend:"estable", term:"香薰加湿器", nota:"Video precioso y recompra por esencias." },
-  { n:"Almohadas ergonómicas", cat:"Wellness", explotado:42, proyeccion:85, tend:"subiendo", term:"记忆棉枕头", nota:"Dolor real: se paga sin discutir." },
-  { n:"Antiestrés y foco", cat:"Wellness", explotado:30, proyeccion:79, tend:"subiendo", term:"减压玩具", nota:"Impulso puro y contenido que se comparte." },
-  { n:"Sueño y descanso", cat:"Wellness", explotado:38, proyeccion:80, tend:"subiendo", term:"助眠用品", nota:"Antifaces, ruido blanco. Nicho creciendo fuerte." },
-  { n:"Corrección postural", cat:"Salud", explotado:38, proyeccion:84, tend:"subiendo", term:"背部矫正带", nota:"Demo clara. Cuidado con promesas médicas." },
-  { n:"Soporte lumbar y cervical", cat:"Salud", explotado:40, proyeccion:80, tend:"estable", term:"护腰带", nota:"Público de trabajo físico, alta intención." },
-  { n:"Movilidad y bastones", cat:"Salud", explotado:28, proyeccion:76, tend:"subiendo", term:"助行器", nota:"Adultos mayores: nicho enorme y desatendido." },
-  { n:"Compresión y circulación", cat:"Salud", explotado:44, proyeccion:74, tend:"estable", term:"压缩袜", nota:"Recompra natural. Verificar si es producto médico." },
-  { n:"Botiquín y primeros auxilios", cat:"Salud", explotado:50, proyeccion:66, tend:"estable", term:"急救包", nota:"Compra por miedo. Ticket bajo, va en kit." },
-  { n:"Termómetros y medición", cat:"Salud", explotado:58, proyeccion:60, tend:"bajando", term:"体温计", nota:"Puede caer en producto médico: verificar." },
-  { n:"Organización de cocina", cat:"Hogar", explotado:72, proyeccion:74, tend:"estable", term:"厨房收纳", nota:"Rey del video demo. Recompra baja." },
-  { n:"Utensilios multifunción", cat:"Hogar", explotado:76, proyeccion:68, tend:"bajando", term:"多功能厨房工具", nota:"Saturadísimo: sólo con ángulo propio." },
-  { n:"Termos y botellas", cat:"Hogar", explotado:60, proyeccion:82, tend:"subiendo", term:"保温杯", nota:"Muy argentino. La pantalla de temperatura es el gancho." },
-  { n:"Mate y accesorios", cat:"Hogar", explotado:50, proyeccion:88, tend:"subiendo", term:"—", nota:"Demanda local enorme. Personalización = margen." },
-  { n:"Cafetería en casa", cat:"Hogar", explotado:48, proyeccion:80, tend:"subiendo", term:"咖啡器具", nota:"Comunidad apasionada, ticket alto, consumibles." },
-  { n:"Organización de placard", cat:"Hogar", explotado:64, proyeccion:72, tend:"estable", term:"衣柜收纳", nota:"Set que sube el ticket. Demo simple." },
-  { n:"Baño y orden", cat:"Hogar", explotado:62, proyeccion:68, tend:"estable", term:"浴室收纳", nota:"Ticket bajo: obligado a vender en combo." },
-  { n:"Limpieza y aspirado", cat:"Hogar", explotado:55, proyeccion:78, tend:"subiendo", term:"手持吸尘器", nota:"Antes/después imbatible. Enchufa." },
-  { n:"Quitapelusas y textil", cat:"Hogar", explotado:45, proyeccion:74, tend:"subiendo", term:"去毛球器", nota:"Modelo maquinita y hojita." },
-  { n:"Repuestos y consumibles hogar", cat:"Hogar", explotado:35, proyeccion:80, tend:"subiendo", term:"清洁替换", nota:"Lo que hace que vuelvan sin pagar ads." },
-  { n:"Deco de pared", cat:"Hogar", explotado:68, proyeccion:62, tend:"estable", term:"墙面装饰", nota:"Muy visual pero frágil en tránsito." },
-  { n:"Iluminación LED deco", cat:"Hogar", explotado:58, proyeccion:66, tend:"estable", term:"LED灯带", nota:"Barato de pautar. Enchufa: certificación." },
-  { n:"Velas y aromas", cat:"Hogar", explotado:64, proyeccion:60, tend:"bajando", term:"香薰蜡烛", nota:"Recompra buena, pero flete y rotura." },
-  { n:"Plantas y macetas", cat:"Jardín", explotado:40, proyeccion:72, tend:"subiendo", term:"花盆", nota:"Nicho apasionado, poco explotado acá." },
-  { n:"Riego automático", cat:"Jardín", explotado:30, proyeccion:82, tend:"subiendo", term:"自动滴灌", nota:"Resuelve irse de vacaciones. Muy poco explotado." },
-  { n:"Herramientas de jardín", cat:"Jardín", explotado:42, proyeccion:70, tend:"estable", term:"园艺工具", nota:"Alta intención, cero devolución." },
-  { n:"Huerta en casa", cat:"Jardín", explotado:32, proyeccion:76, tend:"subiendo", term:"种植箱", nota:"Tendencia sostenida post pandemia." },
-  { n:"Setup de escritorio", cat:"Oficina", explotado:52, proyeccion:82, tend:"subiendo", term:"桌面收纳", nota:"Compran por estética. Marca propia fácil." },
-  { n:"Soportes y ergonomía", cat:"Oficina", explotado:48, proyeccion:84, tend:"subiendo", term:"笔记本支架", nota:"Liviano, sin variantes, ticket medio." },
-  { n:"Cables y organización", cat:"Oficina", explotado:70, proyeccion:62, tend:"estable", term:"理线器", nota:"Satélite ideal, nunca ancla." },
-  { n:"Papelería premium", cat:"Oficina", explotado:58, proyeccion:58, tend:"bajando", term:"文具", nota:"Ticket bajo y estacional." },
-  { n:"Sillas y apoyos", cat:"Oficina", explotado:55, proyeccion:70, tend:"estable", term:"人体工学", nota:"Voluminoso: flete caro." },
-  { n:"Iluminación de escritorio", cat:"Oficina", explotado:56, proyeccion:68, tend:"estable", term:"台灯", nota:"Enchufa: seguridad eléctrica sí o sí." },
-  { n:"Organizadores de auto", cat:"Auto", explotado:50, proyeccion:82, tend:"subiendo", term:"车载收纳", nota:"Utilidad pura, público masivo." },
-  { n:"Soportes de celular auto", cat:"Auto", explotado:72, proyeccion:66, tend:"bajando", term:"车载手机支架", nota:"Impulso puro, ticket bajo." },
-  { n:"Limpieza de auto", cat:"Auto", explotado:48, proyeccion:78, tend:"subiendo", term:"洗车用品", nota:"Antes/después + consumible que se repone." },
-  { n:"Seguridad y emergencia auto", cat:"Auto", explotado:40, proyeccion:74, tend:"subiendo", term:"车用应急", nota:"Compra por miedo, alta conversión." },
-  { n:"Confort en auto", cat:"Auto", explotado:52, proyeccion:72, tend:"estable", term:"汽车座椅垫", nota:"Cuidado con compatibilidad por modelo." },
-  { n:"Accesorios de moto", cat:"Auto", explotado:44, proyeccion:76, tend:"subiendo", term:"摩托车配件", nota:"Comunidad fiel y muy segmentable." },
-  { n:"Camping y refugio", cat:"Outdoor", explotado:40, proyeccion:79, tend:"subiendo", term:"户外露营", nota:"Ticket alto, comunidad fiel, estacional." },
-  { n:"Cocina outdoor", cat:"Outdoor", explotado:38, proyeccion:78, tend:"subiendo", term:"户外炊具", nota:"Asado + camping: combinación muy argentina." },
-  { n:"Mochilas técnicas", cat:"Outdoor", explotado:55, proyeccion:76, tend:"estable", term:"户外背包", nota:"Ticket alto. Textil paga derechos altos." },
-  { n:"Hidratación outdoor", cat:"Outdoor", explotado:45, proyeccion:74, tend:"subiendo", term:"户外水壶", nota:"Liviano y fácil de brandear." },
-  { n:"Pesca", cat:"Outdoor", explotado:35, proyeccion:72, tend:"estable", term:"钓鱼用品", nota:"Nicho apasionado que gasta sin mirar." },
-  { n:"Ciclismo accesorios", cat:"Outdoor", explotado:58, proyeccion:74, tend:"subiendo", term:"自行车配件", nota:"Creciendo con la movilidad urbana." },
-  { n:"Trekking y montaña", cat:"Outdoor", explotado:42, proyeccion:70, tend:"estable", term:"登山装备", nota:"Estacional pero de ticket alto." },
-  { n:"Bandas y resistencia", cat:"Fitness", explotado:68, proyeccion:70, tend:"estable", term:"阻力带", nota:"Liviano, sin certificación, se vende en kit." },
-  { n:"Core y abdominales", cat:"Fitness", explotado:70, proyeccion:64, tend:"bajando", term:"健腹轮", nota:"Muy competido por precio." },
-  { n:"Yoga y pilates", cat:"Fitness", explotado:60, proyeccion:72, tend:"estable", term:"瑜伽用品", nota:"Público que recompra por nivel." },
-  { n:"Recuperación muscular", cat:"Fitness", explotado:44, proyeccion:80, tend:"subiendo", term:"筋膜球", nota:"Cruza con Wellness: ticket alto." },
-  { n:"Medición y wearables", cat:"Fitness", explotado:75, proyeccion:58, tend:"bajando", term:"运动手环", nota:"Competís contra marcas conocidas." },
-  { n:"Accesorios de gimnasio", cat:"Fitness", explotado:62, proyeccion:66, tend:"estable", term:"健身配件", nota:"Guantes, straps, muñequeras. Satélites." },
-  { n:"Cochecitos y accesorios", cat:"Bebés", explotado:50, proyeccion:84, tend:"subiendo", term:"婴儿车配件", nota:"Compran sin regatear." },
-  { n:"Alimentación de bebé", cat:"Bebés", explotado:52, proyeccion:80, tend:"subiendo", term:"婴儿餐具", nota:"Recompra por etapas." },
-  { n:"Seguridad del hogar bebé", cat:"Bebés", explotado:44, proyeccion:82, tend:"subiendo", term:"儿童安全", nota:"Compra por miedo: convierte altísimo." },
-  { n:"Baño y cambiado", cat:"Bebés", explotado:48, proyeccion:76, tend:"estable", term:"婴儿洗浴", nota:"Recompra buena, ticket medio." },
-  { n:"Juguetes de estimulación", cat:"Bebés", explotado:56, proyeccion:74, tend:"estable", term:"婴儿玩具", nota:"Certificación de juguetes obligatoria." },
-  { n:"Porteo", cat:"Bebés", explotado:42, proyeccion:78, tend:"subiendo", term:"婴儿背带", nota:"Nicho con comunidad fuerte." },
-  { n:"Aparatos de belleza", cat:"Belleza", explotado:72, proyeccion:66, tend:"estable", term:"美容仪", nota:"Sólo aparatos: el cosmético va con ANMAT." },
-  { n:"Depilación y afeitado", cat:"Belleza", explotado:70, proyeccion:68, tend:"estable", term:"剃须刀", nota:"Voltra lo tiene entre sus más vendidos." },
-  { n:"Cuidado del cabello", cat:"Belleza", explotado:78, proyeccion:60, tend:"bajando", term:"美发工具", nota:"Saturado. Sólo herramientas, no producto." },
-  { n:"Manicura", cat:"Belleza", explotado:66, proyeccion:64, tend:"estable", term:"美甲工具", nota:"Kit que sube el ticket. Público fiel." },
-  { n:"Organización de cosméticos", cat:"Belleza", explotado:58, proyeccion:66, tend:"estable", term:"化妆品收纳", nota:"Cruza con Hogar. Sin certificación." },
-  { n:"Accesorios de audio", cat:"Tecnología", explotado:85, proyeccion:56, tend:"bajando", term:"耳机配件", nota:"Márgenes apretados contra marcas." },
-  { n:"Carga y energía", cat:"Tecnología", explotado:80, proyeccion:58, tend:"bajando", term:"充电器", nota:"Enchufa y compite con marcas." },
-  { n:"Fotografía móvil", cat:"Tecnología", explotado:55, proyeccion:70, tend:"subiendo", term:"手机摄影", nota:"Creadores de contenido: nicho creciendo." },
-  { n:"Smart home", cat:"Tecnología", explotado:58, proyeccion:74, tend:"subiendo", term:"智能家居", nota:"Ticket medio-alto. Todo enchufa." },
-  { n:"Almacenamiento y backup", cat:"Tecnología", explotado:72, proyeccion:58, tend:"bajando", term:"存储设备", nota:"Difícil competir con marcas." },
-  { n:"Accesorios gamer", cat:"Gaming", explotado:70, proyeccion:66, tend:"estable", term:"电竞配件", nota:"Comunidad enorme, sensible al precio." },
-  { n:"Setup gamer deco", cat:"Gaming", explotado:60, proyeccion:72, tend:"subiendo", term:"电竞灯光", nota:"Muy visual, se vende por estética." },
-  { n:"Coleccionables gaming", cat:"Gaming", explotado:50, proyeccion:68, tend:"subiendo", term:"游戏周边", nota:"Ojo con licencias y marcas registradas." },
-  { n:"Organización de viaje", cat:"Viaje", explotado:48, proyeccion:76, tend:"subiendo", term:"旅行收纳", nota:"Compra por evento, ticket medio." },
-  { n:"Valijas y bolsos", cat:"Viaje", explotado:62, proyeccion:70, tend:"estable", term:"行李箱", nota:"Voluminoso. Textil paga derechos altos." },
-  { n:"Confort de vuelo", cat:"Viaje", explotado:44, proyeccion:74, tend:"subiendo", term:"旅行颈枕", nota:"Impulso previo al viaje. Buen margen." },
-  { n:"Adaptadores y viaje tech", cat:"Viaje", explotado:58, proyeccion:66, tend:"estable", term:"转换插头", nota:"Enchufa: certificación." },
-  { n:"Joyería de acero", cat:"Moda", explotado:82, proyeccion:62, tend:"estable", term:"钛钢首饰", nota:"Valor/peso imbatible. Ganás por curaduría." },
-  { n:"Relojes", cat:"Moda", explotado:80, proyeccion:56, tend:"bajando", term:"手表", nota:"Ojo con réplicas: infracción marcaria." },
-  { n:"Anteojos y sol", cat:"Moda", explotado:74, proyeccion:60, tend:"bajando", term:"太阳镜", nota:"Riesgo de copiar diseños registrados." },
-  { n:"Billeteras y marroquinería", cat:"Moda", explotado:68, proyeccion:64, tend:"estable", term:"钱包", nota:"Textil y cuero pagan derechos altos." },
-  { n:"Accesorios de pelo", cat:"Moda", explotado:64, proyeccion:60, tend:"estable", term:"发饰", nota:"Ticket bajo, sólo en packs." },
-  { n:"Bufandas y abrigo", cat:"Moda", explotado:70, proyeccion:54, tend:"bajando", term:"围巾", nota:"Estacional y con talles." },
-  { n:"Juguetes educativos", cat:"Niños", explotado:56, proyeccion:72, tend:"estable", term:"益智玩具", nota:"Certificación obligatoria de seguridad." },
-  { n:"Arte y manualidades", cat:"Niños", explotado:48, proyeccion:70, tend:"subiendo", term:"手工玩具", nota:"Recompra por consumibles." },
-  { n:"Aire libre para niños", cat:"Niños", explotado:52, proyeccion:68, tend:"estable", term:"儿童户外", nota:"Estacional fuerte." },
-  { n:"Organización infantil", cat:"Niños", explotado:44, proyeccion:72, tend:"subiendo", term:"儿童收纳", nota:"Cruza con Hogar, menos competido." },
-  { n:"Herramientas manuales", cat:"Herramientas", explotado:62, proyeccion:68, tend:"estable", term:"手动工具", nota:"Alta intención, cero devolución." },
-  { n:"Medición y nivelación", cat:"Herramientas", explotado:50, proyeccion:72, tend:"subiendo", term:"测量工具", nota:"Público profesional que paga." },
-  { n:"Organización de taller", cat:"Herramientas", explotado:46, proyeccion:74, tend:"subiendo", term:"工具收纳", nota:"Poco explotado en ecommerce local." },
-  { n:"Seguridad y protección", cat:"Herramientas", explotado:44, proyeccion:70, tend:"estable", term:"劳保用品", nota:"Compra recurrente de empresas." },
-  { n:"Fiesta y eventos", cat:"Eventos", explotado:58, proyeccion:64, tend:"estable", term:"派对用品", nota:"Muy estacional, ticket bajo." },
-  { n:"Regalos personalizados", cat:"Eventos", explotado:42, proyeccion:80, tend:"subiendo", term:"定制礼品", nota:"Personalización = margen y difícil de copiar." },
-  { n:"Bar y coctelería", cat:"Eventos", explotado:44, proyeccion:76, tend:"subiendo", term:"调酒工具", nota:"Ticket medio-alto, público que regala." },
-  { n:"Adultos mayores", cat:"Emergentes", explotado:26, proyeccion:84, tend:"subiendo", term:"老人用品", nota:"Nicho enorme y muy desatendido en Argentina." },
-  { n:"Accesibilidad", cat:"Emergentes", explotado:24, proyeccion:78, tend:"subiendo", term:"辅助器具", nota:"Muy poco explotado, alta necesidad real." },
-  { n:"Home office ergonómico", cat:"Emergentes", explotado:46, proyeccion:80, tend:"subiendo", term:"居家办公", nota:"Se consolidó, no era moda pasajera." },
-  { n:"Sustentables y reutilizables", cat:"Emergentes", explotado:36, proyeccion:76, tend:"subiendo", term:"环保用品", nota:"Tendencia sostenida, público dispuesto a pagar." },
-  { n:"Organización de autos eléctricos", cat:"Emergentes", explotado:18, proyeccion:74, tend:"subiendo", term:"电动车配件", nota:"Muy temprano, pero crece rápido." },
-  { n:"Creadores de contenido", cat:"Emergentes", explotado:44, proyeccion:82, tend:"subiendo", term:"直播设备", nota:"Explotando con el live commerce." },
-  { n:"Otro", cat:"Otro", explotado:50, proyeccion:50, tend:"estable", term:"", nota:"Sin clasificar." }
+  { n:"Comederos y bebederos", cat:"Mascotas", margen:62, explotado:55, proyeccion:88, tend:"subiendo", term:"宠物碗", nota:"Ancla clásica: problema visible y demo perfecta." },
+  { n:"Juguetes para perro", cat:"Mascotas", margen:58, explotado:62, proyeccion:80, tend:"estable", term:"狗玩具", nota:"Recompra por desgaste. Cuidado con la calidad." },
+  { n:"Juguetes para gato", cat:"Mascotas", margen:64, explotado:48, proyeccion:83, tend:"subiendo", term:"猫玩具", nota:"Menos saturado que perro y el dueño gasta igual." },
+  { n:"Cepillado y pelo de mascota", cat:"Mascotas", margen:66, explotado:44, proyeccion:86, tend:"subiendo", term:"宠物梳", nota:"El antes/después es contenido viral asegurado." },
+  { n:"Correas y arneses", cat:"Mascotas", margen:58, explotado:66, proyeccion:74, tend:"estable", term:"宠物牵引绳", nota:"Muy competido, pero el arnés antitirón todavía rinde." },
+  { n:"Higiene de mascota", cat:"Mascotas", margen:52, explotado:40, proyeccion:82, tend:"subiendo", term:"宠物清洁", nota:"Bolsitas y toallitas: el motor de recompra del rubro." },
+  { n:"Transporte de mascota", cat:"Mascotas", margen:48, explotado:42, proyeccion:78, tend:"subiendo", term:"宠物背包", nota:"Voluminoso: calcular el flete antes de enamorarse." },
+  { n:"Camas y descanso de mascota", cat:"Mascotas", margen:44, explotado:58, proyeccion:70, tend:"estable", term:"宠物窝", nota:"Volumen alto, margen bajo por flete." },
+  { n:"Ropa para mascota", cat:"Mascotas", margen:50, explotado:70, proyeccion:62, tend:"bajando", term:"宠物衣服", nota:"Tiene talles: el clavo del rubro." },
+  { n:"Fuentes de agua para gatos", cat:"Mascotas", margen:54, explotado:35, proyeccion:84, tend:"subiendo", term:"猫饮水机", nota:"Nicho en crecimiento. Enchufa: revisar certificación." },
+  { n:"Masajeadores de cuello", cat:"Wellness", margen:74, explotado:45, proyeccion:88, tend:"subiendo", term:"颈椎按摩器", nota:"Demo hipnótica, ticket alto, regalo perfecto." },
+  { n:"Pistolas de masaje", cat:"Wellness", margen:70, explotado:52, proyeccion:82, tend:"estable", term:"筋膜枪", nota:"Costo bajo y ticket alto. Gimnasio y oficina." },
+  { n:"Difusores y humidificadores", cat:"Wellness", margen:72, explotado:55, proyeccion:74, tend:"estable", term:"香薰加湿器", nota:"Video precioso y recompra por esencias." },
+  { n:"Almohadas ergonómicas", cat:"Wellness", margen:68, explotado:42, proyeccion:85, tend:"subiendo", term:"记忆棉枕头", nota:"Dolor real: se paga sin discutir." },
+  { n:"Antiestrés y foco", cat:"Wellness", margen:72, explotado:30, proyeccion:79, tend:"subiendo", term:"减压玩具", nota:"Impulso puro y contenido que se comparte." },
+  { n:"Sueño y descanso", cat:"Wellness", margen:70, explotado:38, proyeccion:80, tend:"subiendo", term:"助眠用品", nota:"Antifaces, ruido blanco. Nicho creciendo fuerte." },
+  { n:"Corrección postural", cat:"Salud", margen:74, explotado:38, proyeccion:84, tend:"subiendo", term:"背部矫正带", nota:"Demo clara. Cuidado con promesas médicas." },
+  { n:"Soporte lumbar y cervical", cat:"Salud", margen:72, explotado:40, proyeccion:80, tend:"estable", term:"护腰带", nota:"Público de trabajo físico, alta intención." },
+  { n:"Movilidad y bastones", cat:"Salud", margen:66, explotado:28, proyeccion:76, tend:"subiendo", term:"助行器", nota:"Adultos mayores: nicho enorme y desatendido." },
+  { n:"Compresión y circulación", cat:"Salud", margen:64, explotado:44, proyeccion:74, tend:"estable", term:"压缩袜", nota:"Recompra natural. Verificar si es producto médico." },
+  { n:"Botiquín y primeros auxilios", cat:"Salud", margen:52, explotado:50, proyeccion:66, tend:"estable", term:"急救包", nota:"Compra por miedo. Ticket bajo, va en kit." },
+  { n:"Termómetros y medición", cat:"Salud", margen:44, explotado:58, proyeccion:60, tend:"bajando", term:"体温计", nota:"Puede caer en producto médico: verificar." },
+  { n:"Organización de cocina", cat:"Hogar", margen:56, explotado:72, proyeccion:74, tend:"estable", term:"厨房收纳", nota:"Rey del video demo. Recompra baja." },
+  { n:"Utensilios multifunción", cat:"Hogar", margen:52, explotado:76, proyeccion:68, tend:"bajando", term:"多功能厨房工具", nota:"Saturadísimo: sólo con ángulo propio." },
+  { n:"Termos y botellas", cat:"Hogar", margen:64, explotado:60, proyeccion:82, tend:"subiendo", term:"保温杯", nota:"Muy argentino. La pantalla de temperatura es el gancho." },
+  { n:"Mate y accesorios", cat:"Hogar", margen:70, explotado:50, proyeccion:88, tend:"subiendo", term:"—", nota:"Demanda local enorme. Personalización = margen." },
+  { n:"Cafetería en casa", cat:"Hogar", margen:58, explotado:48, proyeccion:80, tend:"subiendo", term:"咖啡器具", nota:"Comunidad apasionada, ticket alto, consumibles." },
+  { n:"Organización de placard", cat:"Hogar", margen:56, explotado:64, proyeccion:72, tend:"estable", term:"衣柜收纳", nota:"Set que sube el ticket. Demo simple." },
+  { n:"Baño y orden", cat:"Hogar", margen:56, explotado:62, proyeccion:68, tend:"estable", term:"浴室收纳", nota:"Ticket bajo: obligado a vender en combo." },
+  { n:"Limpieza y aspirado", cat:"Hogar", margen:56, explotado:55, proyeccion:78, tend:"subiendo", term:"手持吸尘器", nota:"Antes/después imbatible. Enchufa." },
+  { n:"Quitapelusas y textil", cat:"Hogar", margen:56, explotado:45, proyeccion:74, tend:"subiendo", term:"去毛球器", nota:"Modelo maquinita y hojita." },
+  { n:"Repuestos y consumibles hogar", cat:"Hogar", margen:56, explotado:35, proyeccion:80, tend:"subiendo", term:"清洁替换", nota:"Lo que hace que vuelvan sin pagar ads." },
+  { n:"Deco de pared", cat:"Hogar", margen:60, explotado:68, proyeccion:62, tend:"estable", term:"墙面装饰", nota:"Muy visual pero frágil en tránsito." },
+  { n:"Iluminación LED deco", cat:"Hogar", margen:52, explotado:58, proyeccion:66, tend:"estable", term:"LED灯带", nota:"Barato de pautar. Enchufa: certificación." },
+  { n:"Velas y aromas", cat:"Hogar", margen:66, explotado:64, proyeccion:60, tend:"bajando", term:"香薰蜡烛", nota:"Recompra buena, pero flete y rotura." },
+  { n:"Plantas y macetas", cat:"Jardín", margen:62, explotado:40, proyeccion:72, tend:"subiendo", term:"花盆", nota:"Nicho apasionado, poco explotado acá." },
+  { n:"Riego automático", cat:"Jardín", margen:66, explotado:30, proyeccion:82, tend:"subiendo", term:"自动滴灌", nota:"Resuelve irse de vacaciones. Muy poco explotado." },
+  { n:"Herramientas de jardín", cat:"Jardín", margen:56, explotado:42, proyeccion:70, tend:"estable", term:"园艺工具", nota:"Alta intención, cero devolución." },
+  { n:"Huerta en casa", cat:"Jardín", margen:60, explotado:32, proyeccion:76, tend:"subiendo", term:"种植箱", nota:"Tendencia sostenida post pandemia." },
+  { n:"Setup de escritorio", cat:"Oficina", margen:62, explotado:52, proyeccion:82, tend:"subiendo", term:"桌面收纳", nota:"Compran por estética. Marca propia fácil." },
+  { n:"Soportes y ergonomía", cat:"Oficina", margen:64, explotado:48, proyeccion:84, tend:"subiendo", term:"笔记本支架", nota:"Liviano, sin variantes, ticket medio." },
+  { n:"Cables y organización", cat:"Oficina", margen:54, explotado:70, proyeccion:62, tend:"estable", term:"理线器", nota:"Satélite ideal, nunca ancla." },
+  { n:"Papelería premium", cat:"Oficina", margen:44, explotado:58, proyeccion:58, tend:"bajando", term:"文具", nota:"Ticket bajo y estacional." },
+  { n:"Sillas y apoyos", cat:"Oficina", margen:44, explotado:55, proyeccion:70, tend:"estable", term:"人体工学", nota:"Voluminoso: flete caro." },
+  { n:"Iluminación de escritorio", cat:"Oficina", margen:48, explotado:56, proyeccion:68, tend:"estable", term:"台灯", nota:"Enchufa: seguridad eléctrica sí o sí." },
+  { n:"Organizadores de auto", cat:"Auto", margen:56, explotado:50, proyeccion:82, tend:"subiendo", term:"车载收纳", nota:"Utilidad pura, público masivo." },
+  { n:"Soportes de celular auto", cat:"Auto", margen:50, explotado:72, proyeccion:66, tend:"bajando", term:"车载手机支架", nota:"Impulso puro, ticket bajo." },
+  { n:"Limpieza de auto", cat:"Auto", margen:60, explotado:48, proyeccion:78, tend:"subiendo", term:"洗车用品", nota:"Antes/después + consumible que se repone." },
+  { n:"Seguridad y emergencia auto", cat:"Auto", margen:62, explotado:40, proyeccion:74, tend:"subiendo", term:"车用应急", nota:"Compra por miedo, alta conversión." },
+  { n:"Confort en auto", cat:"Auto", margen:56, explotado:52, proyeccion:72, tend:"estable", term:"汽车座椅垫", nota:"Cuidado con compatibilidad por modelo." },
+  { n:"Accesorios de moto", cat:"Auto", margen:56, explotado:44, proyeccion:76, tend:"subiendo", term:"摩托车配件", nota:"Comunidad fiel y muy segmentable." },
+  { n:"Camping y refugio", cat:"Outdoor", margen:58, explotado:40, proyeccion:79, tend:"subiendo", term:"户外露营", nota:"Ticket alto, comunidad fiel, estacional." },
+  { n:"Cocina outdoor", cat:"Outdoor", margen:58, explotado:38, proyeccion:78, tend:"subiendo", term:"户外炊具", nota:"Asado + camping: combinación muy argentina." },
+  { n:"Mochilas técnicas", cat:"Outdoor", margen:50, explotado:55, proyeccion:76, tend:"estable", term:"户外背包", nota:"Ticket alto. Textil paga derechos altos." },
+  { n:"Hidratación outdoor", cat:"Outdoor", margen:58, explotado:45, proyeccion:74, tend:"subiendo", term:"户外水壶", nota:"Liviano y fácil de brandear." },
+  { n:"Pesca", cat:"Outdoor", margen:58, explotado:35, proyeccion:72, tend:"estable", term:"钓鱼用品", nota:"Nicho apasionado que gasta sin mirar." },
+  { n:"Ciclismo accesorios", cat:"Outdoor", margen:58, explotado:58, proyeccion:74, tend:"subiendo", term:"自行车配件", nota:"Creciendo con la movilidad urbana." },
+  { n:"Trekking y montaña", cat:"Outdoor", margen:58, explotado:42, proyeccion:70, tend:"estable", term:"登山装备", nota:"Estacional pero de ticket alto." },
+  { n:"Bandas y resistencia", cat:"Fitness", margen:62, explotado:68, proyeccion:70, tend:"estable", term:"阻力带", nota:"Liviano, sin certificación, se vende en kit." },
+  { n:"Core y abdominales", cat:"Fitness", margen:62, explotado:70, proyeccion:64, tend:"bajando", term:"健腹轮", nota:"Muy competido por precio." },
+  { n:"Yoga y pilates", cat:"Fitness", margen:62, explotado:60, proyeccion:72, tend:"estable", term:"瑜伽用品", nota:"Público que recompra por nivel." },
+  { n:"Recuperación muscular", cat:"Fitness", margen:68, explotado:44, proyeccion:80, tend:"subiendo", term:"筋膜球", nota:"Cruza con Wellness: ticket alto." },
+  { n:"Medición y wearables", cat:"Fitness", margen:34, explotado:75, proyeccion:58, tend:"bajando", term:"运动手环", nota:"Competís contra marcas conocidas." },
+  { n:"Accesorios de gimnasio", cat:"Fitness", margen:58, explotado:62, proyeccion:66, tend:"estable", term:"健身配件", nota:"Guantes, straps, muñequeras. Satélites." },
+  { n:"Cochecitos y accesorios", cat:"Bebés", margen:60, explotado:50, proyeccion:84, tend:"subiendo", term:"婴儿车配件", nota:"Compran sin regatear." },
+  { n:"Alimentación de bebé", cat:"Bebés", margen:60, explotado:52, proyeccion:80, tend:"subiendo", term:"婴儿餐具", nota:"Recompra por etapas." },
+  { n:"Seguridad del hogar bebé", cat:"Bebés", margen:60, explotado:44, proyeccion:82, tend:"subiendo", term:"儿童安全", nota:"Compra por miedo: convierte altísimo." },
+  { n:"Baño y cambiado", cat:"Bebés", margen:60, explotado:48, proyeccion:76, tend:"estable", term:"婴儿洗浴", nota:"Recompra buena, ticket medio." },
+  { n:"Juguetes de estimulación", cat:"Bebés", margen:60, explotado:56, proyeccion:74, tend:"estable", term:"婴儿玩具", nota:"Certificación de juguetes obligatoria." },
+  { n:"Porteo", cat:"Bebés", margen:60, explotado:42, proyeccion:78, tend:"subiendo", term:"婴儿背带", nota:"Nicho con comunidad fuerte." },
+  { n:"Aparatos de belleza", cat:"Belleza", margen:64, explotado:72, proyeccion:66, tend:"estable", term:"美容仪", nota:"Sólo aparatos: el cosmético va con ANMAT." },
+  { n:"Depilación y afeitado", cat:"Belleza", margen:64, explotado:70, proyeccion:68, tend:"estable", term:"剃须刀", nota:"Voltra lo tiene entre sus más vendidos." },
+  { n:"Cuidado del cabello", cat:"Belleza", margen:64, explotado:78, proyeccion:60, tend:"bajando", term:"美发工具", nota:"Saturado. Sólo herramientas, no producto." },
+  { n:"Manicura", cat:"Belleza", margen:64, explotado:66, proyeccion:64, tend:"estable", term:"美甲工具", nota:"Kit que sube el ticket. Público fiel." },
+  { n:"Organización de cosméticos", cat:"Belleza", margen:64, explotado:58, proyeccion:66, tend:"estable", term:"化妆品收纳", nota:"Cruza con Hogar. Sin certificación." },
+  { n:"Accesorios de audio", cat:"Tecnología", margen:34, explotado:85, proyeccion:56, tend:"bajando", term:"耳机配件", nota:"Márgenes apretados contra marcas." },
+  { n:"Carga y energía", cat:"Tecnología", margen:32, explotado:80, proyeccion:58, tend:"bajando", term:"充电器", nota:"Enchufa y compite con marcas." },
+  { n:"Fotografía móvil", cat:"Tecnología", margen:48, explotado:55, proyeccion:70, tend:"subiendo", term:"手机摄影", nota:"Creadores de contenido: nicho creciendo." },
+  { n:"Smart home", cat:"Tecnología", margen:44, explotado:58, proyeccion:74, tend:"subiendo", term:"智能家居", nota:"Ticket medio-alto. Todo enchufa." },
+  { n:"Almacenamiento y backup", cat:"Tecnología", margen:30, explotado:72, proyeccion:58, tend:"bajando", term:"存储设备", nota:"Difícil competir con marcas." },
+  { n:"Accesorios gamer", cat:"Gaming", margen:40, explotado:70, proyeccion:66, tend:"estable", term:"电竞配件", nota:"Comunidad enorme, sensible al precio." },
+  { n:"Setup gamer deco", cat:"Gaming", margen:52, explotado:60, proyeccion:72, tend:"subiendo", term:"电竞灯光", nota:"Muy visual, se vende por estética." },
+  { n:"Coleccionables gaming", cat:"Gaming", margen:42, explotado:50, proyeccion:68, tend:"subiendo", term:"游戏周边", nota:"Ojo con licencias y marcas registradas." },
+  { n:"Organización de viaje", cat:"Viaje", margen:54, explotado:48, proyeccion:76, tend:"subiendo", term:"旅行收纳", nota:"Compra por evento, ticket medio." },
+  { n:"Valijas y bolsos", cat:"Viaje", margen:46, explotado:62, proyeccion:70, tend:"estable", term:"行李箱", nota:"Voluminoso. Textil paga derechos altos." },
+  { n:"Confort de vuelo", cat:"Viaje", margen:62, explotado:44, proyeccion:74, tend:"subiendo", term:"旅行颈枕", nota:"Impulso previo al viaje. Buen margen." },
+  { n:"Adaptadores y viaje tech", cat:"Viaje", margen:44, explotado:58, proyeccion:66, tend:"estable", term:"转换插头", nota:"Enchufa: certificación." },
+  { n:"Joyería de acero", cat:"Moda", margen:78, explotado:82, proyeccion:62, tend:"estable", term:"钛钢首饰", nota:"Valor/peso imbatible. Ganás por curaduría." },
+  { n:"Relojes", cat:"Moda", margen:58, explotado:80, proyeccion:56, tend:"bajando", term:"手表", nota:"Ojo con réplicas: infracción marcaria." },
+  { n:"Anteojos y sol", cat:"Moda", margen:62, explotado:74, proyeccion:60, tend:"bajando", term:"太阳镜", nota:"Riesgo de copiar diseños registrados." },
+  { n:"Billeteras y marroquinería", cat:"Moda", margen:58, explotado:68, proyeccion:64, tend:"estable", term:"钱包", nota:"Textil y cuero pagan derechos altos." },
+  { n:"Accesorios de pelo", cat:"Moda", margen:66, explotado:64, proyeccion:60, tend:"estable", term:"发饰", nota:"Ticket bajo, sólo en packs." },
+  { n:"Bufandas y abrigo", cat:"Moda", margen:66, explotado:70, proyeccion:54, tend:"bajando", term:"围巾", nota:"Estacional y con talles." },
+  { n:"Juguetes educativos", cat:"Niños", margen:46, explotado:56, proyeccion:72, tend:"estable", term:"益智玩具", nota:"Certificación obligatoria de seguridad." },
+  { n:"Arte y manualidades", cat:"Niños", margen:54, explotado:48, proyeccion:70, tend:"subiendo", term:"手工玩具", nota:"Recompra por consumibles." },
+  { n:"Aire libre para niños", cat:"Niños", margen:48, explotado:52, proyeccion:68, tend:"estable", term:"儿童户外", nota:"Estacional fuerte." },
+  { n:"Organización infantil", cat:"Niños", margen:52, explotado:44, proyeccion:72, tend:"subiendo", term:"儿童收纳", nota:"Cruza con Hogar, menos competido." },
+  { n:"Herramientas manuales", cat:"Herramientas", margen:50, explotado:62, proyeccion:68, tend:"estable", term:"手动工具", nota:"Alta intención, cero devolución." },
+  { n:"Medición y nivelación", cat:"Herramientas", margen:50, explotado:50, proyeccion:72, tend:"subiendo", term:"测量工具", nota:"Público profesional que paga." },
+  { n:"Organización de taller", cat:"Herramientas", margen:50, explotado:46, proyeccion:74, tend:"subiendo", term:"工具收纳", nota:"Poco explotado en ecommerce local." },
+  { n:"Seguridad y protección", cat:"Herramientas", margen:50, explotado:44, proyeccion:70, tend:"estable", term:"劳保用品", nota:"Compra recurrente de empresas." },
+  { n:"Fiesta y eventos", cat:"Eventos", margen:62, explotado:58, proyeccion:64, tend:"estable", term:"派对用品", nota:"Muy estacional, ticket bajo." },
+  { n:"Regalos personalizados", cat:"Eventos", margen:76, explotado:42, proyeccion:80, tend:"subiendo", term:"定制礼品", nota:"Personalización = margen y difícil de copiar." },
+  { n:"Bar y coctelería", cat:"Eventos", margen:62, explotado:44, proyeccion:76, tend:"subiendo", term:"调酒工具", nota:"Ticket medio-alto, público que regala." },
+  { n:"Adultos mayores", cat:"Emergentes", margen:68, explotado:26, proyeccion:84, tend:"subiendo", term:"老人用品", nota:"Nicho enorme y muy desatendido en Argentina." },
+  { n:"Accesibilidad", cat:"Emergentes", margen:66, explotado:24, proyeccion:78, tend:"subiendo", term:"辅助器具", nota:"Muy poco explotado, alta necesidad real." },
+  { n:"Home office ergonómico", cat:"Emergentes", margen:64, explotado:46, proyeccion:80, tend:"subiendo", term:"居家办公", nota:"Se consolidó, no era moda pasajera." },
+  { n:"Sustentables y reutilizables", cat:"Emergentes", margen:62, explotado:36, proyeccion:76, tend:"subiendo", term:"环保用品", nota:"Tendencia sostenida, público dispuesto a pagar." },
+  { n:"Organización de autos eléctricos", cat:"Emergentes", margen:50, explotado:18, proyeccion:74, tend:"subiendo", term:"电动车配件", nota:"Muy temprano, pero crece rápido." },
+  { n:"Creadores de contenido", cat:"Emergentes", margen:52, explotado:44, proyeccion:82, tend:"subiendo", term:"直播设备", nota:"Explotando con el live commerce." },
+  { n:"Otro", cat:"Otro", margen:50, explotado:50, proyeccion:50, tend:"estable", term:"", nota:"Sin clasificar." }
 ];
 
 const RUBROS = RUBROS_META.map(r=>r.n);
@@ -126,10 +126,14 @@ const metaRubro = n => RUBROS_META.find(r=>r.n===n) || RUBROS_META[RUBROS_META.l
 const MACROS = [...new Set(RUBROS_META.map(r=>r.cat))];
 const PESO_TEND = { subiendo:12, estable:0, bajando:-12 };
 /* Oportunidad: cuánto potencial queda sin tomar. */
+/* Oportunidad con el margen como factor dominante: de nada sirve un rubro que
+   crece si te deja tres pesos. Margen 45%, proyección 30%, saturación -20%, tendencia. */
 const oportunidad = n => {
   const m = metaRubro(n);
-  return Math.max(0, Math.min(100, Math.round(m.proyeccion - m.explotado*0.65 + (PESO_TEND[m.tend]||0))));
+  const v = m.margen*0.45 + m.proyeccion*0.30 - m.explotado*0.20 + (PESO_TEND[m.tend]||0)*0.6 + 14;
+  return Math.max(0, Math.min(100, Math.round(v)));
 };
+const colorMargen = v => v>=68 ? "var(--acc)" : v>=55 ? "var(--star)" : v>=45 ? "var(--warn)" : "var(--bad)";
 
 const ORIGENES = ["China","Argentina (importador)","Argentina (fabricante)","Brasil","India","Otro"];
 
@@ -163,28 +167,28 @@ const MULT_PUESTO = 2.2;
 
 /* ---------- Proveedores reales relevados ---------- */
 const PROVEEDORES = [
-  { nombre:"Petcom", tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"Petcom", rubros:["Mascotas"], tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Argentina",
     url:"https://www.petcom.com.ar/mayoristas-petcom/",
     nota:"Importadora mayorista. Juguetes interactivos, comederos, bebederos automáticos, rascadores." },
-  { nombre:"Petmarket Distribución", tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"Petmarket Distribución", rubros:["Mascotas"], tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Argentina",
     url:"https://petmarketdistribucion.com.ar/venta-mayorista/",
     whatsapp:"11 6506-6097",
     nota:"Stock para pet shops al por mayor." },
-  { nombre:"DonBodegón Mayorista", tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Colombia",
+  { nombre:"DonBodegón Mayorista", rubros:["Mascotas"], tipo:"Importador local", rubro:"Comederos y bebederos", pais:"Colombia",
     whatsapp:"+573007170351",
     url:"https://mayorista.donbodegon.com/c/Animales%20y%20Mascotas",
     nota:"⚠️ Es COLOMBIANO (+57), no argentino. Importa de China y vende en Colombia — sirve como referencia de precio, no como proveedor local." },
-  { nombre:"MAU", tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"MAU", rubros:["Mascotas"], tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
     whatsapp:"11 3533-5659",
     url:"https://mau.com.ar/tienda/",
     nota:"Fábrica con +10 años. Abastece pet shops, veterinarias y cadenas. Reposición rápida, sin aduana." },
-  { nombre:"Happy Pet", tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"Happy Pet", rubros:["Mascotas"], tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
     url:"https://www.happypet-accesorios.com.ar/ventas-por-mayor/",
     nota:"500+ artículos: juguetes, ropa, colchones, higiene, accesorios." },
-  { nombre:"Que Mona Mascotas", tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"Que Mona Mascotas", rubros:["Mascotas"], tipo:"Fabricante nacional", rubro:"Comederos y bebederos", pais:"Argentina",
     url:"https://www.quemonamascotas.com.ar/mayoristas/",
     nota:"Taller propio, diseños exclusivos. Envíos desde Villa Carlos Paz." },
-  { nombre:"M-Once", tipo:"Mayorista local", rubro:"Comederos y bebederos", pais:"Argentina",
+  { nombre:"M-Once", rubros:["Mascotas"], tipo:"Mayorista local", rubro:"Comederos y bebederos", pais:"Argentina",
     url:"https://m-once.com/",
     nota:"Pet shop mayorista en Once. Ideal para ir a ver y tocar producto." },
   { nombre:"1688", tipo:"1688", rubro:"Todos", pais:"China",
@@ -238,16 +242,63 @@ const PLATAFORMAS = [
     nota:"Para encontrar importadores argentinos que ya traen ese producto." }
 ];
 
-/* Devuelve los links de búsqueda reales de un rubro. */
+/* Zonas mayoristas físicas de CABA por categoría. Ir un día y volver con
+   diez listas de precios sigue siendo la forma más rápida que existe. */
+const ZONAS_AR = {
+  "Hogar":"Once — bazar y menaje", "Mascotas":"Once · pet shops mayoristas",
+  "Moda":"Av. Avellaneda (Flores) · Once para accesorios", "Niños":"Once — juguetería",
+  "Auto":"Warnes — autopartes y accesorios", "Oficina":"Once — librería y papelería",
+  "Belleza":"Once — perfumería y accesorios", "Tecnología":"Galerías de Once y Microcentro",
+  "Herramientas":"Warnes y Av. Juan B. Justo", "Jardín":"Mercado de Flores · viveros mayoristas",
+  "Fitness":"Once — deportes", "Bebés":"Once — puericultura",
+  "Eventos":"Once — cotillón mayorista", "Viaje":"Once — marroquinería",
+  "Outdoor":"Once y Warnes", "Salud":"Once — ortopedias mayoristas",
+  "Wellness":"Once — bazar y electro chico", "Gaming":"Microcentro",
+  "Emergentes":"Depende del producto", "Otro":"Once es el punto de partida"
+};
+
+/* Devuelve los links de búsqueda reales de un rubro.
+   Primero lo argentino, que es donde vas a comprar de verdad al arrancar;
+   las plataformas chinas quedan al final, para cuando el volumen justifique importar. */
 function buscadoresDe(rubroNombre){
   const m = metaRubro(rubroNombre);
-  const chino = m.term && m.term !== "-" ? m.term : rubroNombre;
-  return PLATAFORMAS.map(p=>({
-    n:p.n, pais:p.pais, clase:p.clase, minimo:p.minimo, idioma:p.idioma, nota:p.nota,
-    term: p.pais==="Argentina" ? rubroNombre : chino,
-    url: p.url(p.pais==="Argentina" ? rubroNombre : chino)
+  const chino = (m.term && m.term !== "—" && m.term !== "-") ? m.term : rubroNombre;
+  const r = encodeURIComponent(rubroNombre);
+  const g = q => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const ml = s => `https://listado.mercadolibre.com.ar/${encodeURIComponent(String(s).replace(/\s+/g,"-"))}`;
+
+  const argentinos = [
+    { n:"Mercado Libre · por mayor", pais:"Argentina", clase:"nacional", minimo:"variable", idioma:"español",
+      term:rubroNombre, url: ml(rubroNombre+"-por-mayor"),
+      nota:"Importadores que ya traen el producto y venden por cantidad. El más rápido para empezar." },
+    { n:"Mayoristas en Google", pais:"Argentina", clase:"nacional", minimo:"variable", idioma:"español",
+      term:rubroNombre, url: g(`mayorista ${rubroNombre} argentina venta por mayor`),
+      nota:"Distribuidores con web propia y lista de precios." },
+    { n:"Con factura A", pais:"Argentina", clase:"nacional", minimo:"variable", idioma:"español",
+      term:rubroNombre, url: g(`distribuidor mayorista ${rubroNombre} argentina "factura A"`),
+      nota:"Filtra a los que facturan, que es condición para que puedas respaldar el stock." },
+    { n:"Mayoristas en Instagram", pais:"Argentina", clase:"nacional", minimo:"variable", idioma:"español",
+      term:rubroNombre, url: g(`site:instagram.com mayorista ${rubroNombre} argentina`),
+      nota:"Mucho mayorista argentino opera sólo por Instagram, con catálogo al día." },
+    { n:"Fabricantes nacionales", pais:"Argentina", clase:"nacional", minimo:"variable", idioma:"español",
+      term:rubroNombre, url: g(`fábrica fabricante ${rubroNombre} argentina mayorista`),
+      nota:"Mejor margen que el importador y reposición en días, no en meses." }
+  ];
+
+  const competencia = [
+    { n:"Mercado Libre", pais:"Argentina", clase:"competencia", minimo:"—", idioma:"español",
+      term:rubroNombre, url: ml(rubroNombre),
+      nota:"Precio de venta y cuánta competencia hay. Tu techo de precio." }
+  ];
+
+  const chinas = PLATAFORMAS.filter(p=>p.clase==="plataforma").map(p=>({
+    n:p.n, pais:p.pais, clase:"importar", minimo:p.minimo, idioma:p.idioma, nota:p.nota,
+    term: chino, url: p.url(chino)
   }));
+
+  return [...argentinos, ...competencia, ...chinas];
 }
+const zonaDe = cat => ZONAS_AR[cat] || ZONAS_AR["Otro"];
 
 /* Dominios conocidos: al pegar un link se completa proveedor, país y tipo. */
 const DOMINIOS = [

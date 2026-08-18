@@ -51,7 +51,9 @@ Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache
 
 ### WhatsApp
 Cargá el teléfono en el producto. Se asume Argentina: se limpian el 0 de área y el 15, y se antepone 549. Para otro país escribilo con `+` adelante y se respeta tal cual. El mensaje que abre ya trae las dos preguntas obligatorias: precio mayorista, mínimo de compra y factura A.
-- **Rubros** — 22 rubros con dos medidores: **Explotado** (competencia que ya hay) y **Proyección** (potencial). La **Oportunidad** combina las dos y ordena la grilla. Tocá uno y te filtra los productos de ese rubro.
+- **Rubros** — 111 rubros con tres medidores: **Explotado** (competencia que ya hay) y **Proyección** (potencial). El **Margen bruto típico** manda: es el número grande y el orden por defecto. La **Oportunidad** lo combina con proyección, saturación y tendencia (el margen pesa 45%). Filtro por margen mínimo, seis órdenes y búsqueda.
+
+Cada rubro abre sus fuentes en este orden: **primero Argentina** (Mercado Libre por mayor, mayoristas en Google e Instagram, fabricantes nacionales, filtro por factura A y la zona mayorista física), después competencia y precio, y **recién al final las plataformas chinas** — que son para cuando el volumen justifique importar, no para arrancar.
 - **Proveedores** — los relevados, con bandera del país, link y WhatsApp. Marca cuáles ya estás usando.
 
 ### País del proveedor

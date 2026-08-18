@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v12";
+const APP_VER = "v13";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -21,7 +21,7 @@ let settings = { mult: MULT_PUESTO };
 let seedVer  = 0;
 let misProv  = [];
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -575,6 +575,7 @@ function vProductos(){
 }
 
 const ORDENES = [
+  { k:"margen",n:"Mejor margen" },
   { k:"op",    n:"Oportunidad" },
   { k:"tend",  n:"Tendencia" },
   { k:"exp+",  n:"Más explotados" },
@@ -586,6 +587,7 @@ const PESO_ORD = { subiendo:2, estable:1, bajando:0 };
 
 function ordenarRubros(arr, k){
   const c=[...arr];
+  if(k==="margen") return c.sort((a,b)=> b.margen-a.margen || oportunidad(b.n)-oportunidad(a.n));
   if(k==="az")   return c.sort((a,b)=>a.n.localeCompare(b.n,"es"));
   if(k==="za")   return c.sort((a,b)=>b.n.localeCompare(a.n,"es"));
   if(k==="exp+") return c.sort((a,b)=>b.explotado-a.explotado);
@@ -610,10 +612,11 @@ function vRubros(){
   let base = RUBROS_META.filter(m=>{
     if(m.n==="Otro" && !mios["Otro"]) return false;
     if(state.fMacro && m.cat!==state.fMacro) return false;
+    if(state.fMargen && m.margen < state.fMargen) return false;
     if(q && !(m.n+" "+m.cat+" "+m.nota).toLowerCase().includes(q)) return false;
     return true;
   });
-  base = ordenarRubros(base, state.rubroOrden||"op");
+  base = ordenarRubros(base, state.rubroOrden||"margen");
 
   const medidor=(v,color,etq)=>`
     <div class="med"><div class="med-top"><span>${etq}</span><b style="color:${color}">${v}</b></div>
@@ -631,8 +634,14 @@ function vRubros(){
       <option value="">Todas las categorías</option>
       ${MACROS.map(c=>`<option value="${esc(c)}" ${c===state.fMacro?"selected":""}>${IC_MACRO[c]||""} ${esc(c)}</option>`).join("")}
     </select>
+    <select class="input" id="fMargen">
+      <option value="0">Cualquier margen</option>
+      <option value="70" ${state.fMargen==70?"selected":""}>70% o más</option>
+      <option value="60" ${state.fMargen==60?"selected":""}>60% o más</option>
+      <option value="50" ${state.fMargen==50?"selected":""}>50% o más</option>
+    </select>
     <div class="segmented wrap">
-      ${ORDENES.map(o=>`<button class="${(state.rubroOrden||"op")===o.k?"on":""}" onclick="setOrdenRubro('${o.k}')">${o.n}</button>`).join("")}
+      ${ORDENES.map(o=>`<button class="${(state.rubroOrden||"margen")===o.k?"on":""}" onclick="setOrdenRubro('${o.k}')">${o.n}</button>`).join("")}
     </div>
   </div>
 
@@ -651,8 +660,12 @@ function vRubros(){
           <h3>${esc(f.n)}</h3>
           <div class="rubro-sub">${esc(f.cat)} · <span style="color:${COLOR_TEND[f.tend]}">${FLECHA_TEND[f.tend]} ${f.tend}</span>${mio?` · <b style="color:var(--acc)">${mio.n} tuyo${mio.n===1?"":"s"}</b>`:""}</div>
         </div>
-        <div class="rubro-op"><b style="color:${cOp}">${op}</b><span>oport.</span></div>
+        <div class="rubro-nums">
+          <div class="rubro-margen"><b style="color:${colorMargen(f.margen)}">${f.margen}%</b><span>margen</span></div>
+          <div class="rubro-op"><b style="color:${cOp}">${op}</b><span>oport.</span></div>
+        </div>
       </div>
+      ${medidor(f.margen, colorMargen(f.margen), "Margen bruto típico")}
       ${medidor(f.explotado,cExp,"Explotado")}
       ${medidor(f.proyeccion,cPro,"Proyección")}
       <p class="rubro-nota">${esc(f.nota)}</p>
@@ -676,9 +689,14 @@ function vRubros(){
 /* Proveedores del rubro: búsquedas reales, no una lista inventada. */
 function panelRubro(f){
   const bs = buscadoresDe(f.n);
-  const provs = bs.filter(b=>b.clase==="plataforma");
+  const provs = bs.filter(b=>b.clase==="nacional");
+  const impo  = bs.filter(b=>b.clase==="importar");
   const comp  = bs.filter(b=>b.clase==="competencia");
-  const dir   = PROVEEDORES.filter(p=>p.rubro==="Todos" || (p.rubros||[]).includes(f.cat) || p.rubro===f.cat);
+  /* Sólo proveedores directos: las plataformas ya van en su propia sección. */
+  const dir = PROVEEDORES.filter(p=>
+    p.tipo!=="1688" && p.tipo!=="Alibaba" && p.pais!=="China" &&
+    ((p.rubros||[]).includes(f.cat) || p.rubro===f.cat)
+  );
   const fila = b => `
     <div class="prov-row">
       <div class="prov-id">
@@ -691,18 +709,24 @@ function panelRubro(f){
     </div>`;
   return `
   <div class="rubro-panel">
-    <div class="panel-h">Dónde buscarlo <span class="hint">término: <code>${esc(f.term||f.n)}</code></span></div>
+    <div class="panel-h">🇦🇷 Proveedores en Argentina <span class="hint">acá comprás al arrancar: sin aduana, sin esperar 90 días y con factura</span></div>
     ${provs.map(fila).join("")}
-    <div class="panel-h">Competencia y precio de venta</div>
+    <div class="prov-row zona">
+      <div class="prov-id"><b>Zona mayorista</b>
+        <span class="prov-meta">${esc(zonaDe(f.cat))} · ir un día y volver con diez listas de precios</span></div>
+    </div>
+    <div class="panel-h">💰 Precio de venta y competencia <span class="hint">margen típico del rubro: <b style="color:${colorMargen(f.margen)}">${f.margen}%</b></span></div>
     <div id="mkRubro-${esc(f.n).replace(/[^a-zA-Z0-9]/g,"")}"></div>
     ${comp.map(fila).join("")}
-    ${dir.length?`<div class="panel-h">Proveedores verificados</div>
+    ${dir.length?`<div class="panel-h">✅ Verificados por mí <span class="hint">los abrí y confirmé uno por uno</span></div>
       ${dir.map(p=>`<div class="prov-row">
         <div class="prov-id"><b>${esc(p.nombre)}</b>
           <span class="prov-meta">${bandera(p.pais)} ${esc(p.pais)} · ${esc(p.tipo)}</span></div>
         <a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
         ${p.whatsapp?`<a class="accbtn wa" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">${ICO.wa}</a>`:""}
       </div>`).join("")}`:""}
+    <div class="panel-h">🇨🇳 Importar directo <span class="hint">recién cuando el volumen lo justifique · término: <code>${esc(f.term||f.n)}</code></span></div>
+    ${impo.map(fila).join("")}
     <div class="rubro-pie">
       <button class="btn ghost mini" onclick="abrirRubro(null)">Cerrar</button>
       <button class="btn primary mini" onclick="nuevoEnRubro('${esc(f.n).replace(/'/g,"\\'")}')">+ Producto en este rubro</button>
@@ -1041,6 +1065,7 @@ function render(){
     const q=$("#qRubro");
     if(q){ q.oninput=e=>{ state.qRubro=e.target.value; render(); const n=$("#qRubro"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }; }
     const fm=$("#fMacro"); if(fm) fm.onchange=e=>{ state.fMacro=e.target.value; render(); };
+    const fg=$("#fMargen"); if(fg) fg.onchange=e=>{ state.fMargen=Number(e.target.value)||0; render(); };
   }
   if(v==="nichos"){
     const fn=$("#fMacroNicho"); if(fn) fn.onchange=e=>{ state.fMacroNicho=e.target.value; render(); };
