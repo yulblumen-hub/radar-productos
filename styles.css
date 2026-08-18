@@ -294,3 +294,6 @@ a.accbtn{text-decoration:none}
 .bandera{font-size:13px;line-height:1}
 .bandera-lg{font-size:17px;margin-right:6px;vertical-align:-1px}
 .psub2{color:var(--tx3);margin-left:5px}
+
+.ver{font-variant-numeric:tabular-nums;background:var(--bg3);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;color:var(--tx3);font-size:11px}

@@ -1,6 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
+const APP_VER = "v6";
 const KEY  = "radar-productos-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
@@ -265,7 +266,7 @@ function vProductos(){
         </td>
       </tr>`;}).join("")}</tbody>
   </table></div>
-  <p class="hintline" style="margin-top:10px">${ps.length} producto${ps.length===1?"":"s"} · Costo puesto = costo × multiplicador, activable por producto (defecto ×${settings.mult}). Tocá una fila para editar.</p>
+  <p class="hintline" style="margin-top:10px"><span class="ver">${APP_VER}</span> · ${ps.length} producto${ps.length===1?"":"s"} · Costo puesto = costo × multiplicador, activable por producto (defecto ×${settings.mult}). Tocá una fila para editar.</p>
   ` : `<div class="empty"><div class="big">🔍</div>No hay productos con esos filtros.</div>`}`;
 }
 
@@ -673,7 +674,22 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#modalBack"
 /* ================= INSTALACIÓN (PWA) ================= */
 (function(){
   if("serviceWorker" in navigator){
-    addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
+    /* Cuando el service worker nuevo toma el control, recargamos una sola vez.
+       Sin esto la primera visita después de un deploy sigue mostrando lo viejo. */
+    let recargando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", ()=>{
+      if(recargando) return;
+      recargando = true;
+      location.reload();
+    });
+    addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js")
+        .then(reg=>{
+          reg.update();                                   // buscar versión nueva ya
+          setInterval(()=>reg.update(), 60*60*1000);      // y una vez por hora
+        })
+        .catch(()=>{});
+    });
   }
 
   const btn = $("#btnInstalar");
