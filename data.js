@@ -199,6 +199,15 @@ const PROVEEDORES = [
    Vacío = la app funciona igual, sólo que con links en vez de datos. */
 const API_MERCADO = "";
 
+/* ---------- Tiendas a espiar ----------
+   Toda tienda Shopify expone su catálogo en /products.json: productos, precios,
+   descuento, stock, fecha de publicación e imágenes. Sin credenciales y con CORS
+   abierto, así que la app lo lee directo. Verificado contra Voltra. */
+const TIENDAS_SEED = [
+  { id:"t1", nombre:"Voltra", url:"https://voltra.com.ar",
+    nota:"Marca propia sobre genérico chino. Catálogo chico, ticket alto y descuento permanente como precio ancla." }
+];
+
 /* ---------- Plataformas (proveedores masivos) ----------
    No son fábricas: son buscadores de fábricas. El link se arma con el término
    del rubro, así que lleva a una búsqueda real, no a una home genérica. */

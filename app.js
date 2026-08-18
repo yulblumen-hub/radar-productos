@@ -1,9 +1,10 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v11";
+const APP_VER = "v12";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
+const TKEY = "radar-tiendas-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -20,7 +21,7 @@ let settings = { mult: MULT_PUESTO };
 let seedVer  = 0;
 let misProv  = [];
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", reco:null, rubroAbierto:null, qRubro:"", fMacro:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", reco:null, tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -35,7 +36,9 @@ function load(){
   try{
     const mp = localStorage.getItem(PKEY);
     if(mp) misProv = JSON.parse(mp) || [];
-  }catch(e){}
+    const tt = localStorage.getItem(TKEY);
+    state.tiendas = tt ? (JSON.parse(tt)||[]) : TIENDAS_SEED.map(t=>({...t}));
+  }catch(e){ state.tiendas = TIENDAS_SEED.map(t=>({...t})); }
   try{
     const raw = localStorage.getItem(KEY);
     if(raw){
@@ -114,6 +117,7 @@ function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify(state.productos));
     localStorage.setItem(PKEY, JSON.stringify(misProv));
+    localStorage.setItem(TKEY, JSON.stringify(state.tiendas));
     localStorage.setItem(SKEY, JSON.stringify({...settings, seedVer}));
   }catch(e){ toast("No se pudo guardar (almacenamiento lleno)"); }
 }
@@ -253,6 +257,68 @@ const money = n => (n||n===0) ? "US$ "+Number(n).toLocaleString("es-AR",{maximum
 function scoreLine(s){
   return `<div class="scoreline"><div class="scorebar"><i style="width:${s}%;background:${scoreColor(s)}"></i></div>
     <b class="num" style="color:${scoreColor(s)};font-size:12.5px">${s}</b></div>`;
+}
+
+/* ================= ESPÍA DE TIENDAS ================= */
+/* Shopify publica el catálogo entero en /products.json. No hace falta token
+   ni proxy: la respuesta viene con CORS abierto. Si la tienda no es Shopify,
+   lo decimos y listo. */
+const tiendaCache = new Map();
+
+function limpiarDominio(u){
+  let s = String(u||"").trim().replace(/\/+$/,"");
+  if(!/^https?:\/\//i.test(s)) s = "https://" + s;
+  try{ return new URL(s).origin; }catch(e){ return null; }
+}
+
+async function traerTienda(url){
+  const base = limpiarDominio(url);
+  if(!base) return { error:"La dirección no parece válida." };
+  if(tiendaCache.has(base)) return tiendaCache.get(base);
+  const prom = fetch(`${base}/products.json?limit=250`)
+    .then(r=>{
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(j=>{
+      if(!j || !Array.isArray(j.products)) throw new Error("formato");
+      return { productos: j.products.map(normalizarProd) };
+    })
+    .catch(()=>({ error:"No pude leer el catálogo. Puede que la tienda no sea Shopify (Tienda Nube y WooCommerce no exponen este listado)." }));
+  tiendaCache.set(base, prom);
+  return prom;
+}
+
+function normalizarProd(p){
+  const v = (p.variants||[])[0] || {};
+  const precio = Number(v.price)||0;
+  const antes  = Number(v.compare_at_price)||0;
+  return {
+    titulo: p.title || "",
+    handle: p.handle || "",
+    tipo: p.product_type || "",
+    precio, antes,
+    off: antes>precio ? Math.round((1-precio/antes)*100) : 0,
+    stock: v.available !== false,
+    publicado: (p.published_at||"").slice(0,10),
+    img: ((p.images||[])[0]||{}).src || ""
+  };
+}
+
+const diasDesde = f => f ? Math.floor((Date.now()-new Date(f))/86400000) : 9999;
+
+function resumirTienda(prods){
+  const px = prods.map(p=>p.precio).filter(x=>x>0).sort((a,b)=>a-b);
+  const conOff = prods.filter(p=>p.off>0);
+  return {
+    total: prods.length,
+    min: px[0]||0,
+    mediana: px[Math.floor(px.length/2)]||0,
+    max: px[px.length-1]||0,
+    conDescuento: conOff.length,
+    offPromedio: conOff.length ? Math.round(conOff.reduce((s,p)=>s+p.off,0)/conOff.length) : 0,
+    nuevos: prods.filter(p=>diasDesde(p.publicado)<=45).length
+  };
 }
 
 /* ================= DATOS DE MERCADO ================= */
@@ -851,6 +917,107 @@ function vNichos(){
 function setNichoTop(n){ state.nichoTop=n; render(); }
 function irARubro(n){ state.view="rubros"; state.rubroAbierto=n; state.qRubro=n; render(); }
 
+function vTiendas(){
+  return `
+  <div class="section-h"><h2>Tiendas</h2>
+    <span class="hint">catálogo, precios y lanzamientos de tiendas que ya venden lo que querés vender</span></div>
+
+  <div class="toolbar">
+    <input class="input" id="nuevaTienda" placeholder="Pegá la dirección de una tienda: mitienda.com.ar">
+    <button class="btn primary" id="btnAddTienda">+ Espiar</button>
+    <button class="btn ghost" id="btnRefrescarT">↻ Actualizar</button>
+  </div>
+
+  <div id="tiendasBox">
+    ${state.tiendas.map(t=>`<div class="tienda card" id="tienda-${t.id}">
+      <div class="tienda-h">
+        <div>
+          <h3>${esc(t.nombre)}</h3>
+          <a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.url.replace(/^https?:\/\//,""))} ↗</a>
+          ${t.nota?`<p class="rubro-nota">${esc(t.nota)}</p>`:""}
+        </div>
+        <button class="accbtn del" onclick="borrarTienda('${t.id}')">${ICO.tacho}</button>
+      </div>
+      <div class="tienda-body"><p class="hintline">Leyendo el catálogo…</p></div>
+    </div>`).join("")}
+  </div>
+
+  ${state.tiendas.length?"":`<div class="empty"><div class="big">🕵</div>
+    Sumá una tienda que venda lo que te interesa.<br>
+    <span class="hintline">Funciona con tiendas Shopify — que es lo que usa la mayoría de las marcas de este estilo.</span></div>`}
+
+  <p class="hintline" style="margin-top:14px">
+    Los datos salen del catálogo público de cada tienda. Sirve para ver qué ticket manejan,
+    con cuánto descuento trabajan y sobre todo <b>qué lanzaron hace poco</b>: eso es lo que les está funcionando ahora.
+  </p>`;
+}
+
+function tiendaHTML(t, d){
+  if(d.error) return `<p class="hintline" style="color:var(--warn)">${esc(d.error)}</p>`;
+  const r = resumirTienda(d.productos);
+  const nuevos = [...d.productos].sort((a,b)=>(b.publicado||"").localeCompare(a.publicado||"")).slice(0,8);
+  return `
+  <div class="mk-kpis" style="margin:12px 0 4px">
+    <div><b>${r.total}</b><span>productos</span></div>
+    <div><b style="color:var(--acc)">${pesos(r.mediana)}</b><span>ticket típico</span></div>
+    <div><b>${pesos(r.min)}</b><span>el más barato</span></div>
+    <div><b>${pesos(r.max)}</b><span>el más caro</span></div>
+    <div><b>${r.conDescuento}/${r.total}</b><span>con descuento</span></div>
+    <div><b>${r.offPromedio}%</b><span>off promedio</span></div>
+    <div><b style="color:${r.nuevos?"var(--warn)":"var(--tx3)"}">${r.nuevos}</b><span>nuevos 45 días</span></div>
+  </div>
+  <div class="panel-h">Lo último que publicaron</div>
+  <div class="lanzamientos">
+    ${nuevos.map(p=>{
+      const dias = diasDesde(p.publicado);
+      return `<div class="lanz">
+        <span class="foto">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy" onerror="this.remove()">`:""}</span>
+        <div class="lanz-txt">
+          <div class="pname">${esc(p.titulo.slice(0,58))}</div>
+          <div class="psub">${p.publicado} · hace ${dias} día${dias===1?"":"s"}${p.tipo?` · ${esc(p.tipo)}`:""}${p.stock?"":" · sin stock"}</div>
+        </div>
+        <div class="lanz-precio">
+          <b>${pesos(p.precio)}</b>
+          ${p.off?`<span class="off">${p.off}% off</span>`:""}
+        </div>
+        <button class="accbtn" title="Sumarlo al radar"
+          onclick='sumarDesdeTienda(${JSON.stringify({t:p.titulo,precio:p.precio,img:p.img}).replace(/'/g,"&#39;")})'>+</button>
+      </div>`;}).join("")}
+  </div>`;
+}
+
+async function pintarTiendas(){
+  for(const t of state.tiendas){
+    const caja = document.querySelector(`#tienda-${t.id} .tienda-body`);
+    if(!caja) continue;
+    const d = await traerTienda(t.url);
+    const sigue = document.querySelector(`#tienda-${t.id} .tienda-body`);
+    if(sigue) sigue.innerHTML = tiendaHTML(t, d);
+  }
+}
+
+function agregarTienda(url){
+  const base = limpiarDominio(url);
+  if(!base){ toast("Dirección inválida"); return; }
+  if(state.tiendas.some(t=>t.url===base)){ toast("Ya la estabas espiando"); return; }
+  const nombre = base.replace(/^https?:\/\//,"").replace(/^www\./,"").split(".")[0];
+  state.tiendas.push({ id:uid(), nombre: nombre.charAt(0).toUpperCase()+nombre.slice(1), url:base, nota:"" });
+  save(); render(); pintarTiendas();
+}
+function borrarTienda(id){
+  const t = state.tiendas.find(x=>x.id===id);
+  if(!t || !confirm(`¿Dejar de espiar ${t.nombre}?`)) return;
+  state.tiendas = state.tiendas.filter(x=>x.id!==id);
+  save(); render(); pintarTiendas();
+}
+function sumarDesdeTienda(p){
+  openModal(null);
+  state.editing.nombre = p.t;
+  state.editing.img    = p.img || "";
+  state.editing.notas  = `Visto en una tienda a ${pesos(p.precio)} (precio de venta al público, en pesos).`;
+  renderModal();
+}
+
 /* ================= RENDER ================= */
 function render(){
   $$(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===state.view));
@@ -859,9 +1026,17 @@ function render(){
       v==="dashboard"   ? vDashboard()
     : v==="productos"   ? vProductos()
     : v==="rubros"      ? vRubros()
+    : v==="tiendas"     ? vTiendas()
     : v==="proveedores" ? vProveedores()
     :                     vNichos();
 
+  if(v==="tiendas"){
+    pintarTiendas();
+    const inp=$("#nuevaTienda");
+    $("#btnAddTienda").onclick = ()=>{ agregarTienda(inp.value); inp.value=""; };
+    inp.onkeydown = e=>{ if(e.key==="Enter"){ agregarTienda(inp.value); inp.value=""; } };
+    $("#btnRefrescarT").onclick = ()=>{ tiendaCache.clear(); render(); pintarTiendas(); toast("Actualizando…"); };
+  }
   if(v==="rubros"){
     const q=$("#qRubro");
     if(q){ q.oninput=e=>{ state.qRubro=e.target.value; render(); const n=$("#qRubro"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }; }

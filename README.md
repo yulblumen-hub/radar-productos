@@ -7,6 +7,13 @@ App para relevar y puntuar productos antes de comprar stock.
 ## Correr
 Abrí `index.html` en el navegador, o entrá al link de arriba. No necesita servidor.
 
+## Tiendas (espía de catálogos)
+Toda tienda **Shopify** expone su catálogo completo en `/products.json`: productos, precios, descuento, stock, fecha de publicación e imágenes. Sin credenciales y con CORS abierto, así que la app lo lee directo desde el navegador — no hace falta backend.
+
+Por tienda ves cuántos productos maneja, el ticket típico, con cuánto descuento trabaja y **qué lanzó hace poco**, que es la señal de lo que le está funcionando ahora. El **+** suma el producto al radar con su foto real.
+
+Viene con Voltra cargada. Tienda Nube y WooCommerce no exponen este listado: si la tienda no es Shopify, la app lo dice.
+
 ## Datos de mercado (Mercado Libre)
 La API de Mercado Libre dejó de ser pública en 2024/25: hoy todo pide token OAuth, que no puede vivir en una página estática. Por eso hay un proxy propio en [`worker/`](worker/) que corre gratis en Cloudflare.
 

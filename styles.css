@@ -533,3 +533,24 @@ a.accbtn{text-decoration:none}
 .mk-row a{flex:1;min-width:150px;font-size:12.5px}
 .mk-precio{font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}
 .mk-vend{font-size:11.5px;color:var(--acc);font-variant-numeric:tabular-nums}
+
+/* --- espía de tiendas --- */
+.tienda{margin-bottom:14px}
+.tienda-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.tienda-h h3{font-size:16px;margin-bottom:2px}
+.tienda-h a{font-size:12.5px}
+.lanzamientos{display:flex;flex-direction:column;gap:6px}
+.lanz{
+  display:flex;align-items:center;gap:11px;padding:8px 10px;
+  background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);
+}
+.lanz .foto{width:42px;height:42px;border-radius:8px}
+.lanz-txt{flex:1;min-width:0}
+.lanz-txt .pname{font-size:13px}
+.lanz-precio{text-align:right;flex:none;white-space:nowrap}
+.lanz-precio b{font-size:13.5px;font-variant-numeric:tabular-nums;display:block}
+.lanz-precio .off{font-size:10.5px;color:var(--warn);font-weight:650}
+@media(max-width:560px){
+  .lanz{flex-wrap:wrap}
+  .lanz-txt{flex-basis:100%;order:3}
+}
