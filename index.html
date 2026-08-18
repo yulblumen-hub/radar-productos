@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar de Productos</title>
+<meta name="theme-color" content="#0e1116">
+<meta name="description" content="Relevar, puntuar y comentar productos antes de comprar stock.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Radar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◎</span>
+    <div>
+      <h1>Radar de Productos</h1>
+      <p class="sub">Winners, clavos y todo lo que hay en el medio</p>
+    </div>
+  </div>
+  <div class="topactions">
+    <button class="btn ghost" id="btnInstalar" hidden>⤓ Instalar</button>
+    <button class="btn ghost" id="btnRandom">🎲 Tirame uno</button>
+    <button class="btn ghost" id="btnExport">↧ Exportar</button>
+    <button class="btn ghost" id="btnImport">↥ Importar</button>
+    <button class="btn primary" id="btnNuevo">+ Producto</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-view="dashboard">Dashboard</button>
+  <button class="tab" data-view="productos">Productos</button>
+  <button class="tab" data-view="rubros">Rubros</button>
+  <button class="tab" data-view="proveedores">Proveedores</button>
+  <button class="tab" data-view="nichos">Nichos</button>
+</nav>
+
+<main id="app"></main>
+
+<!-- Modal producto -->
+<div class="modal-back" id="modalBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="modalTitle">Nuevo producto</h2>
+      <button class="iconbtn" id="modalClose" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn danger ghost" id="btnDelete" hidden>Eliminar</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="btnCancel">Cancelar</button>
+      <button class="btn primary" id="btnSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="fileInput" accept="application/json" hidden>
+
+<div class="modal-back" id="iosBack" hidden>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h2>Instalar en el iPhone</h2>
+      <button class="iconbtn" id="iosClose" aria-label="Cerrar">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--tx2);margin:0 0 12px">Safari no tiene botón de instalar, se hace a mano:</p>
+      <ol style="font-size:14px;color:var(--tx2);padding-left:20px;margin:0;line-height:1.9">
+        <li>Tocá <b style="color:var(--tx)">Compartir</b> (el cuadradito con la flecha)</li>
+        <li>Bajá hasta <b style="color:var(--tx)">Agregar a inicio</b></li>
+        <li>Confirmá con <b style="color:var(--tx)">Agregar</b></li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
