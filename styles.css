@@ -280,3 +280,11 @@ a.accbtn{text-decoration:none}
 .accbtn.del:hover{border-color:var(--bad);color:var(--bad)}
 .accbtn.off{opacity:.28;cursor:not-allowed}
 .accbtn.off:hover{border-color:var(--line);color:var(--tx2);background:var(--bg3)}
+
+/* el campo al que te manda un botón apagado */
+.input.resaltado{
+  border-color:var(--acc);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent);
+}
+.accbtn.off{cursor:pointer}
+.accbtn.off:hover{opacity:.75;border-color:var(--acc);color:var(--acc)}

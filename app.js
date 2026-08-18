@@ -244,10 +244,10 @@ function vProductos(){
         <td class="acciones" onclick="event.stopPropagation()">
           ${p.url
             ? `<a class="accbtn" href="${esc(p.url)}" target="_blank" rel="noopener" title="Abrir el producto">${ICO.link}</a>`
-            : `<span class="accbtn off" title="Sin link del producto — cargalo dentro del producto">${ICO.link}</span>`}
+            : `<button class="accbtn off" title="Falta el link — tocá para cargarlo" onclick="pedirDato('${p.id}','url')">${ICO.link}</button>`}
           ${waLink(p)
             ? `<a class="accbtn wa" href="${esc(waLink(p))}" target="_blank" rel="noopener" title="WhatsApp con ${esc(p.proveedor||"el proveedor")}">${ICO.wa}</a>`
-            : `<span class="accbtn off" title="Sin WhatsApp — cargá el teléfono dentro del producto">${ICO.wa}</span>`}
+            : `<button class="accbtn off" title="Falta el WhatsApp — tocá para cargarlo" onclick="pedirDato('${p.id}','whatsapp')">${ICO.wa}</button>`}
           <button class="accbtn del" title="Eliminar" onclick="borrarProducto('${p.id}')">${ICO.tacho}</button>
         </td>
       </tr>`;}).join("")}</tbody>
@@ -562,6 +562,22 @@ function deleteProducto(){
   state.productos = state.productos.filter(p=>p.id!==e.id);
   save(); closeModal(); render(); toast("Eliminado");
 }
+/* Un botón apagado no puede ser un callejón sin salida: abre el producto
+   con el campo que falta enfocado. */
+function pedirDato(id, campo){
+  openModal(id);
+  /* el modal recién se muestra: hasta que el navegador no recalcula el layout,
+     un campo adentro no puede tomar foco. Un turno de macrotask alcanza. */
+  setTimeout(()=>{
+    const el = $(`[data-f="${campo}"]`);
+    if(!el) return;
+    el.scrollIntoView({block:"center", behavior:"smooth"});
+    el.focus({preventScroll:true});
+    el.classList.add("resaltado");
+    setTimeout(()=>el.classList.remove("resaltado"), 2200);
+  }, 40);
+}
+
 function borrarProducto(id){
   const p = state.productos.find(x=>x.id===id);
   if(!p) return;
