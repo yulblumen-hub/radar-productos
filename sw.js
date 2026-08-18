@@ -1,8 +1,9 @@
 /* Cache-first para el caparazón, con actualización en segundo plano.
    Subí VERSION en cada deploy para invalidar el cache viejo. */
-const VERSION = "radar-v18";
+const VERSION = "radar-v19";
 const ASSETS = ["./","./index.html","./styles.css","./app.js","./data.js",
-                "./manifest.json","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
+                "./manifest.json","./icon-192.png","./icon-512.png","./icon-maskable-512.png",
+                "./fonts/IBMPlexSans-400_700.woff2","./fonts/IBMPlexMono-500.woff2","./fonts/IBMPlexMono-600.woff2"];
 
 self.addEventListener("install", e=>{
   e.waitUntil(caches.open(VERSION).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));

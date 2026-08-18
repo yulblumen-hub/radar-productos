@@ -27,6 +27,9 @@ Pegá el link del producto y se completan solos proveedor, país, tipo, origen y
 ## Fotos
 Campo de imagen por producto, con miniatura en la tabla. Sin foto, muestra un mosaico con el ícono y el color del rubro.
 
+## Tipografía
+IBM Plex Sans para el texto y IBM Plex Mono para todo lo numérico: en un tablero los dígitos se comparan en columna, y el mono los alinea sin esfuerzo. Los archivos viven en `fonts/` y los cachea el service worker, así que la app no depende de ningún CDN y anda offline.
+
 ## Temas
 Claro · Oscuro suave · Oscuro, arriba a la izquierda. Volver a tocar el activo vuelve a seguir al sistema.
 

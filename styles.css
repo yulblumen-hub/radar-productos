@@ -1,3 +1,36 @@
+@font-face{
+  font-family:'IBM Plex Mono';
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+  src:url('fonts/IBMPlexMono-500.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:'IBM Plex Mono';
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+  src:url('fonts/IBMPlexMono-600.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:'IBM Plex Sans';
+  font-style:normal;
+  font-weight:400 700;
+  font-display:swap;
+  src:url('fonts/IBMPlexSans-400_700.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------- escala tipográfica ----------
+   Plex Sans para leer, Plex Mono para todo lo que sea número: en un tablero
+   los dígitos se comparan en columna, y el mono los alinea sin esfuerzo. */
+:root{
+  --sans:'IBM Plex Sans', ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 /* Tokens. El tema oscuro es el de casa; el claro se deriva del mismo verde.
    El toggle del visor (data-theme) tiene que ganarle a la preferencia del SO en los dos sentidos. */
 :root{
@@ -57,10 +90,12 @@
 html,body{margin:0;padding:0}
 body{
   background:var(--bg); color:var(--tx);
-  font:15px/1.5 ui-sans-serif,-apple-system,"SF Pro Text",Inter,Segoe UI,system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased; padding-bottom:60px;
+  font:15px/1.55 var(--sans);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  font-feature-settings:"cv05" 1;      /* la l con cola: se distingue del 1 y la I */
+  padding-bottom:60px;
 }
-h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.015em}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.018em;text-wrap:balance;line-height:1.25}
 a{color:var(--info);text-decoration:none}
 a:hover{text-decoration:underline}
 
@@ -666,3 +701,33 @@ main{width:100%}
   .resglobal{padding:14px 14px 0}
   .buscador input{font-size:16px}   /* evita el zoom automático de iOS */
 }
+
+
+/* ---------- números en mono ---------- */
+.kpi .n, .numeros b, .hot-n, .scorebox .big, .rubro-op b, .rubro-margen b,
+.mk-kpis b, .b-num, .med-top b, .bar-val, .num, .lanz-precio b, .mk-precio,
+.mk-vend, .ver, .rg-tag, .cuenta, .hot-score .lbl, .est{
+  font-family:var(--mono);
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"zero" 1;      /* cero con barra: no se confunde con la O */
+}
+.kpi .n, .numeros b, .hot-n, .scorebox .big, .rubro-op b, .rubro-margen b{
+  font-weight:600; letter-spacing:-.03em;
+}
+.est{font-family:var(--sans)}          /* las estrellas no son números */
+
+/* etiquetas en versalitas: mono chico con tracking */
+.kpi .l, .numeros span, .med-top span, .rubro-op span, .rubro-margen span,
+.mk-kpis span, .side-tit, .panel-h, .rg-tit, .reco-datos .lbl, .scorebox .lbl,
+.hot-tag, th, .field label{
+  font-family:var(--mono);
+  font-weight:500;
+  letter-spacing:.04em;
+}
+
+/* ritmo de lectura */
+.rubro-nota, .minicard p, .reco-w, .hot-txt p{max-width:62ch}
+.hintline{line-height:1.55}
+code{font-family:var(--mono)}
+.pname{letter-spacing:-.008em}
+.hot-txt h3, .reco-cuerpo h3{letter-spacing:-.025em;font-weight:600}
