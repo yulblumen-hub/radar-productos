@@ -560,3 +560,6 @@ a.accbtn{text-decoration:none}
 .rubro-margen b{display:block;font-size:22px;font-weight:750;line-height:1;letter-spacing:-.02em}
 .rubro-margen span{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
 .prov-row.zona{background:transparent;border-style:dashed}
+
+.prov-row.real{background:var(--bg2);border-left:3px solid var(--acc)}
+.prov-row.real .prov-meta{line-height:1.45}

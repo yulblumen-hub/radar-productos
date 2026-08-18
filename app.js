@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v14";
+const APP_VER = "v15";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -56,6 +56,13 @@ function load(){
 /* Los productos de ejemplo se guardan en el navegador la primera vez, así que
    una corrección posterior nunca llegaba. Ahora los que no tocaste se
    actualizan solos; los que editaste quedan intactos. */
+function formProveedor(rubro){
+  const n = prompt("Nombre del proveedor:");
+  if(!n || !n.trim()) return;
+  const url = prompt("Sitio o link (opcional):") || "";
+  sumarProveedor({ n:n.trim(), pais:"Argentina", clase:"Propio", url:url.trim(), rubro });
+}
+
 function sumarProveedor(p){
   const clave = (p.n+"|"+(p.rubro||"")).toLowerCase();
   if(misProv.some(x=>(x.n+"|"+(x.rubro||"")).toLowerCase()===clave)){
@@ -714,9 +721,41 @@ function panelRubro(f){
       <button class="accbtn" title="Sumarlo a mis proveedores"
         onclick='sumarProveedor(${JSON.stringify({n:b.n,pais:b.pais,clase:b.clase,url:b.url,rubro:f.n}).replace(/'/g,"&#39;")})'>+</button>
     </div>`;
+  const dirRubro = provsDeRubro(f.n).concat(
+    PROVEEDORES.filter(p=>(p.rubros||[]).includes(f.cat) && p.pais==="Argentina")
+      .map(p=>({n:p.nombre,url:p.url,tipo:p.tipo,zona:p.pais,nota:p.nota,whatsapp:p.whatsapp,rubros:[f.cat]}))
+  );
+  const mios = misProv.filter(p=>p.rubro===f.n);
+
+  const filaDir = p => `
+    <div class="prov-row real">
+      <div class="prov-id">
+        <b>${esc(p.n)}</b>
+        <span class="prov-meta">${esc(p.tipo)} · ${esc(p.zona)}${p.nota?` — ${esc(p.nota)}`:""}</span>
+      </div>
+      <a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
+      ${p.whatsapp?`<a class="accbtn wa" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">${ICO.wa}</a>`:""}
+      <button class="accbtn" title="Sumarlo a mis proveedores"
+        onclick='sumarProveedor(${JSON.stringify({n:p.n,pais:"Argentina",clase:p.tipo,url:p.url,rubro:f.n}).replace(/'/g,"&#39;")})'>+</button>
+    </div>`;
+
   return `
   <div class="rubro-panel">
-    <div class="panel-h">🇦🇷 Proveedores en Argentina <span class="hint">acá comprás al arrancar: sin aduana, sin esperar 90 días y con factura</span></div>
+    <div class="panel-h">🏢 Proveedores reales <span class="hint">${dirRubro.length} verificados para ${esc(f.cat)} · los abrí uno por uno</span></div>
+    ${dirRubro.length ? dirRubro.map(filaDir).join("")
+      : `<p class="hintline">Todavía no relevé proveedores de <b>${esc(f.cat)}</b>. Usá las búsquedas de abajo y sumá los que encuentres con el +.</p>`}
+    <div class="rubro-pie" style="margin:8px 0 0;padding-top:8px">
+      <button class="btn ghost mini" onclick="formProveedor('${esc(f.n).replace(/'/g,"\\'")}')">+ Agregar un proveedor que conozcas</button>
+    </div>
+
+    ${mios.length?`<div class="panel-h">⭐ Tuyos en este rubro</div>
+      ${mios.map(p=>`<div class="prov-row">
+        <div class="prov-id"><b>${esc(p.n)}</b>
+          <span class="prov-meta">${estrellasHTML(p.rating)}${p.precio?` · US$ ${esc(p.precio)}`:""}${p.resenas?` · ${esc(p.resenas)}`:""}</span></div>
+        ${p.url?`<a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>`:""}
+      </div>`).join("")}`:""}
+
+    <div class="panel-h">🔎 Buscar más <span class="hint">para encontrar los que todavía no están en la lista</span></div>
     ${provs.map(fila).join("")}
     <div class="prov-row zona">
       <div class="prov-id"><b>Zona mayorista</b>

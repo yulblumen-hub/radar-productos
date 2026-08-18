@@ -319,6 +319,93 @@ const DOMINIOS = [
   { m:"tiendanube.com",  prov:"",                        pais:"Argentina", tipo:"Otro",              origen:"Argentina (importador)" }
 ];
 
+
+/* ---------- Directorio de proveedores argentinos ----------
+   Todos verificados en agosto de 2026: busqué cada uno y confirmé que el sitio
+   responde. `rubros` usa las macro-categorías, así que un proveedor de bazar
+   aparece en los ~15 rubros de Hogar sin tener que listarlos uno por uno.
+   Subir DIR_VER cuando se agreguen: los usuarios lo reciben sin perder los suyos. */
+const DIR_VER = 1;
+
+const DIRECTORIO = [
+  /* ---- Hogar, bazar y limpieza ---- */
+  { n:"Distribución Masiva Web", url:"https://distribucionmasivaweb.com.ar/", rubros:["Hogar"],
+    tipo:"Importador", zona:"Argentina", nota:"Importador y mayorista de bazar. Vende sólo a comercios." },
+  { n:"Diran Regalos", url:"https://mayoristadiranregalos.com.ar/", rubros:["Hogar","Eventos"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"49 años. Bazar, decoración, flores artificiales y navidad. Envíos a todo el país." },
+  { n:"Distribuidora Fenix", url:"https://distribuidorafenix.com.ar/", rubros:["Hogar"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Bazar, limpieza y hogar con atención personalizada." },
+  { n:"Portal Mayorista", url:"https://www.portalmayorista.com/", rubros:["Hogar","Herramientas","Fitness"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"30 años. Bazar, polirrubro, ferretería y deportes. Venta online mayorista." },
+
+  /* ---- Salud y ortopedia ---- */
+  { n:"Care Quip", url:"https://care-quip.com.ar/", rubros:["Salud"],
+    tipo:"Importador", zona:"Argentina", nota:"Equipamiento médico y ortopédico. Catálogo mayorista con despacho el mismo día." },
+  { n:"Hospimed", url:"https://www.hospimed.com.ar/", rubros:["Salud"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Insumos hospitalarios y ortopédicos. También equipamiento para geriátricos." },
+  { n:"Ortopedia Modelo", url:"http://ortopediamodelo.com.ar/ortopedia-mayorista.html", rubros:["Salud"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Mayorista de ortopedia, toma pedidos de todo el país." },
+  { n:"Distribuidora Más", url:"https://distribuidoramas.com.ar/", rubros:["Salud"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"60 años, tercera generación. Instrumental y equipamiento médico." },
+  { n:"Fix Salud", url:"https://www.fix-salud.com/venta-mayorista-insumos-medicos-ortopedia/", rubros:["Salud","Wellness"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Insumos médicos y ortopedia por mayor, con retiro en local." },
+
+  /* ---- Auto y moto ---- */
+  { n:"Albocar Mayorista", url:"https://albocarmayorista.com.ar/", rubros:["Auto"],
+    tipo:"Fabricante", zona:"Argentina", nota:"30+ años importando, fabricando y distribuyendo accesorios para el automotor." },
+  { n:"Accesorios GDT", url:"https://www.accesoriosgdt.com.ar/", rubros:["Auto","Outdoor"],
+    tipo:"Fabricante", zona:"Argentina", nota:"Importador y fabricante de accesorios para autos y camping." },
+  { n:"Intercap", url:"https://www.intercap.com.ar/", rubros:["Auto"],
+    tipo:"Importador", zona:"Argentina", nota:"Repuestos y accesorios para motos y cuatriciclos. Tienda mayorista online." },
+  { n:"Otero Motos", url:"https://www.oteromotos.com/", rubros:["Auto"],
+    tipo:"Distribuidor", zona:"Buenos Aires", nota:"48 años. Repuestos nacionales e importados para moto." },
+  { n:"Autopartes Sol", url:"https://autopartessol.com/", rubros:["Auto"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Repuestos, accesorios y lubricantes por mayor." },
+  { n:"Electrospace", url:"https://electrospace.com.ar/", rubros:["Auto","Tecnología"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Accesorios para el automotor, fuerte en audio y electrónica de auto." },
+
+  /* ---- Juguetes, librería, bebés ---- */
+  { n:"Distribuidora Pilita", url:"https://www.distribuidorapilita.com.ar/", rubros:["Niños","Oficina","Bebés"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Juguetes, librería, libros infantiles y regalería. Envíos en 48 h." },
+  { n:"DistriLap", url:"https://www.distrilap.com.ar/", rubros:["Niños","Oficina"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Artículos de librería y juguetería por mayor." },
+  { n:"Di Paolo e Hijos", url:"https://www.dipaolomayorista.com.ar/", rubros:["Niños","Oficina","Eventos"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Librería, juguetes y regalería." },
+  { n:"Distribuidora La Colo", url:"https://distribuidorlacolo.com.ar/", rubros:["Niños","Oficina"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"25+ años. Librería y juguetería, nacional e importado." },
+  { n:"Distribuidora Romero", url:"https://distribuidoraromero.com.ar/", rubros:["Niños"],
+    tipo:"Importador", zona:"Argentina", nota:"Uno de los mayoristas de juguetería online más grandes del país." },
+  { n:"WebUniverso", url:"https://webuniverso.com.ar/", rubros:["Niños","Oficina"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Juguetería y librería mayorista con envíos a todo el país." },
+  { n:"Murad Juguetes", url:"https://www.muradjuguetes.com.ar/", rubros:["Niños"],
+    tipo:"Distribuidor", zona:"Rosario", nota:"Mayorista de Rosario que despacha a todo el país." },
+  { n:"Cocó House", url:"https://www.cocohousekids.com/mayoristas/", rubros:["Bebés"],
+    tipo:"Fabricante", zona:"Argentina", nota:"Fabricante de artículos para bebé con 80+ puntos de venta." },
+
+  /* ---- Herramientas, fitness, varios ---- */
+  { n:"Parnassa", url:"https://www.parnassa.com.ar/", rubros:["Herramientas","Fitness","Jardín","Niños","Outdoor"],
+    tipo:"Importador", zona:"Argentina", nota:"Desde 1990. Juguetes, fitness, herramientas, jardinería y pesca. Stock permanente." },
+  { n:"El Paraíso de Paso", url:"https://elparaisodepaso.com.ar/", rubros:["Fitness"],
+    tipo:"Distribuidor", zona:"Once, CABA", nota:"Fitness y deportes por mayor, con stock en Once." },
+  { n:"AB Deportes & Fitness", url:"https://abfitnessmayorista.com.ar/", rubros:["Fitness"],
+    tipo:"Fabricante", zona:"Argentina", nota:"Fabricantes de artículos deportivos, venta mayorista y minorista." },
+  { n:"Indoor Market", url:"https://www.indoormarket.com.ar/mayoristas/", rubros:["Fitness"],
+    tipo:"Distribuidor", zona:"Argentina", nota:"Distribuidor oficial de marcas de accesorios deportivos." },
+  { n:"Luna Accesorios", url:"https://lunaccesorios.com.ar/", rubros:["Mascotas","Eventos"],
+    tipo:"Fabricante", zona:"Argentina", nota:"Fábrica de accesorios para mascotas. También insumos para sublimar." },
+
+  /* ---- Buscadores de proveedores (directorios) ---- */
+  { n:"El Ferretero", url:"https://elferretero.com.ar/", rubros:["Herramientas"],
+    tipo:"Directorio", zona:"Argentina", nota:"Buscador de distribuidores de ferretería por producto." },
+  { n:"Proveedores.com", url:"https://www.proveedores.com/", rubros:["Todos"],
+    tipo:"Directorio", zona:"Iberoamérica", nota:"Directorio general de mayoristas por rubro. Útil para encontrar nombres nuevos." }
+];
+
+const provsDeRubro = rubroNombre => {
+  const cat = metaRubro(rubroNombre).cat;
+  return DIRECTORIO.filter(p => p.rubros.includes(cat) || p.rubros.includes("Todos"));
+};
+
 /* ---------- Nichos evaluados ---------- */
 const NICHOS = [
   {
