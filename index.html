@@ -13,6 +13,10 @@
 <meta name="apple-mobile-web-app-title" content="Radar">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
+<script>
+  /* antes del CSS: evita el parpadeo al cargar con tema guardado */
+  try{ var t = localStorage.getItem("radar-tema"); if(t) document.documentElement.setAttribute("data-theme", t); }catch(e){}
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -26,6 +30,11 @@
     </div>
   </div>
   <div class="topactions">
+    <span class="temas" role="group" aria-label="Tema">
+      <button data-tema="light" title="Claro">☀</button>
+      <button data-tema="soft"  title="Oscuro suave">◐</button>
+      <button data-tema="dark"  title="Oscuro">☾</button>
+    </span>
     <button class="btn ghost" id="btnInstalar" hidden>⤓ Instalar</button>
     <button class="btn ghost" id="btnRandom">🎲 Tirame uno</button>
     <button class="btn ghost" id="btnExport">↧ Exportar</button>

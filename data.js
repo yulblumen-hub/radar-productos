@@ -2,11 +2,39 @@
    Radar de Productos — datos base
    ============================================================ */
 
-const RUBROS = [
-  "Mascotas","Cocina y Organización","Auto y Moto","Fitness",
-  "Escritorio y Setup","Bebés y Maternidad","Camping y Outdoor",
-  "Belleza y Cuidado","Herramientas","Otro"
+/* Cada rubro con dos lecturas propias:
+   explotado  = qué tan saturado está ya en Argentina (alto = mucha competencia)
+   proyeccion = potencial de crecimiento y margen (alto = vale entrar)
+   La oportunidad es la diferencia entre las dos. Son estimaciones de mercado,
+   no datos duros: sirven para priorizar, no para decidir solo con eso. */
+const RUBROS_META = [
+  { n:"Mascotas",               explotado:55, proyeccion:88, nota:"Recompra natural y compra emocional. El mejor LTV." },
+  { n:"Wellness y Masajes",     explotado:45, proyeccion:86, nota:"Ticket alto, demo hipnótica en video, regalo. Ojo con lo que enchufa." },
+  { n:"Bebés y Maternidad",     explotado:50, proyeccion:84, nota:"Compran sin regatear y recompran por etapas del bebé." },
+  { n:"Escritorio y Setup",     explotado:52, proyeccion:80, nota:"Público que compra por estética. Marca propia fácil." },
+  { n:"Camping y Outdoor",      explotado:40, proyeccion:79, nota:"Estacional pero de ticket alto y comunidad fiel." },
+  { n:"Auto y Moto",            explotado:58, proyeccion:78, nota:"Segmentación quirúrgica en Meta y accesorios infinitos." },
+  { n:"Salud y Ortopedia",      explotado:38, proyeccion:77, nota:"Resuelve dolor real, se paga sin discutir. Cuidado con lo que sea producto médico." },
+  { n:"Cocina y Organización",  explotado:72, proyeccion:74, nota:"El rey del video demo, pero recompra baja: vivís de adquisición." },
+  { n:"Bolsos y Mochilas",      explotado:60, proyeccion:73, nota:"Ticket medio-alto y marca propia natural. Textil paga derechos altos." },
+  { n:"Limpieza del Hogar",     explotado:55, proyeccion:72, nota:"Antes/después que se vende solo. Consumibles de repuesto." },
+  { n:"Fitness y Deporte",      explotado:68, proyeccion:70, nota:"Liviano y sin certificación, pero mucha competencia de precio." },
+  { n:"Jardín y Plantas",       explotado:35, proyeccion:70, nota:"Nicho apasionado, poco explotado en ecommerce argentino." },
+  { n:"Viaje",                  explotado:48, proyeccion:68, nota:"Compra por evento, ticket medio. Estacional fuerte." },
+  { n:"Herramientas",           explotado:62, proyeccion:67, nota:"Alta intención, cero devolución. Comprador que sabe lo que quiere." },
+  { n:"Gaming",                 explotado:70, proyeccion:66, nota:"Comunidad enorme pero muy sensible al precio y a la marca." },
+  { n:"Belleza y Cuidado",      explotado:78, proyeccion:64, nota:"Saturadísimo y ANMAT si es cosmético. Solo aparatos." },
+  { n:"Iluminación y Deco",     explotado:58, proyeccion:63, nota:"Visual y barato de pautar. Casi todo enchufa: seguridad eléctrica." },
+  { n:"Joyería y Accesorios",   explotado:82, proyeccion:62, nota:"Relación valor/peso imbatible, pero ganás por curaduría, no por producto." },
+  { n:"Audio y Tecnología",     explotado:85, proyeccion:58, nota:"Márgenes apretados y competís contra marcas conocidas." },
+  { n:"Juguetes y Juegos",      explotado:66, proyeccion:55, nota:"Certificación obligatoria de seguridad. Muy estacional." },
+  { n:"Papelería y Escolar",    explotado:60, proyeccion:48, nota:"Ticket bajo y estacionalidad brutal. Difícil que cierre con ads." },
+  { n:"Otro",                   explotado:50, proyeccion:50, nota:"Sin clasificar." }
 ];
+const RUBROS = RUBROS_META.map(r=>r.n);
+const metaRubro = n => RUBROS_META.find(r=>r.n===n) || RUBROS_META[RUBROS_META.length-1];
+/* Oportunidad: cuánto potencial queda sin tomar. */
+const oportunidad = n => { const m=metaRubro(n); return Math.max(0, Math.round(m.proyeccion - m.explotado*0.65)); };
 
 const ORIGENES = ["China","Argentina (importador)","Argentina (fabricante)","Brasil","India","Otro"];
 
@@ -72,6 +100,25 @@ const PROVEEDORES = [
     nota:"Más caro que 1688 pero en inglés y con proveedores acostumbrados a exportar." }
 ];
 
+/* Dominios conocidos: al pegar un link se completa proveedor, país y tipo. */
+const DOMINIOS = [
+  { m:"1688.com",        prov:"1688",                    pais:"China",     tipo:"1688",              origen:"China" },
+  { m:"alibaba.com",     prov:"Alibaba",                 pais:"China",     tipo:"Alibaba",           origen:"China" },
+  { m:"aliexpress.",     prov:"AliExpress",              pais:"China",     tipo:"Alibaba",           origen:"China" },
+  { m:"taobao.com",      prov:"Taobao",                  pais:"China",     tipo:"Otro",              origen:"China" },
+  { m:"made-in-china",   prov:"Made-in-China",           pais:"China",     tipo:"Otro",              origen:"China" },
+  { m:"mau.com.ar",      prov:"MAU",                     pais:"Argentina", tipo:"Fabricante nacional", origen:"Argentina (fabricante)", wa:"11 3533-5659" },
+  { m:"petcom.com.ar",   prov:"Petcom",                  pais:"Argentina", tipo:"Importador local",  origen:"Argentina (importador)" },
+  { m:"happypet-",       prov:"Happy Pet",               pais:"Argentina", tipo:"Fabricante nacional", origen:"Argentina (fabricante)" },
+  { m:"quemonamascotas", prov:"Que Mona Mascotas",       pais:"Argentina", tipo:"Fabricante nacional", origen:"Argentina (fabricante)" },
+  { m:"petmarketdistrib",prov:"Petmarket Distribución",  pais:"Argentina", tipo:"Importador local",  origen:"Argentina (importador)", wa:"11 6506-6097" },
+  { m:"m-once.com",      prov:"M-Once",                  pais:"Argentina", tipo:"Mayorista local",   origen:"Argentina (importador)" },
+  { m:"donbodegon",      prov:"DonBodegón Mayorista",    pais:"Colombia",  tipo:"Importador local",  origen:"China", wa:"+573007170351" },
+  { m:"mercadolibre.com.ar", prov:"Mercado Libre",       pais:"Argentina", tipo:"Otro",              origen:"Argentina (importador)" },
+  { m:"voltra.com.ar",   prov:"Voltra (referencia)",     pais:"Argentina", tipo:"Otro",              origen:"China" },
+  { m:"tiendanube.com",  prov:"",                        pais:"Argentina", tipo:"Otro",              origen:"Argentina (importador)" }
+];
+
 /* ---------- Nichos evaluados ---------- */
 const NICHOS = [
   {
@@ -107,6 +154,76 @@ const NICHOS = [
     satelites:"Fundas, cargadores, aromatizantes, kits de limpieza",
     recompra:"Media — consumibles de limpieza y aromatizantes"
   }
+];
+
+/* ---------- Caliente del día ----------
+   Candidatos con la lógica de Voltra: genérico chino rebrandeable, funcional,
+   ticket medio-alto y demo clara en video. El de hoy sale de la fecha. */
+const CALIENTES = [
+  { p:"Masajeador de cuello shiatsu con calor", rubro:"Wellness y Masajes", score:86, prov:"1688 (颈椎按摩器) · Alibaba",
+    w:"Demo hipnótica en video, ticket alto y es el regalo fácil. Voltra lo tiene entre sus más vendidos." },
+  { p:"Pistola de masaje muscular", rubro:"Wellness y Masajes", score:82, prov:"1688 (筋膜枪)",
+    w:"Ticket alto con costo bajo. Público de gimnasio y de oficina a la vez." },
+  { p:"Aspiradora de mano inalámbrica 3 en 1", rubro:"Limpieza del Hogar", score:80, prov:"1688 (车载吸尘器)",
+    w:"El antes/después se vende solo. Ojo: enchufa, necesita seguridad eléctrica." },
+  { p:"Carro plegable retráctil multiuso", rubro:"Viaje", score:83, prov:"1688 (折叠购物车)",
+    w:"Resuelve un dolor real (cargar el súper) y no lleva electrónica ni certificación." },
+  { p:"Soporte de notebook plegable de aluminio", rubro:"Escritorio y Setup", score:84, prov:"1688 (笔记本支架)",
+    w:"Liviano, sin variantes, marca propia trivial con grabado. Ticket medio y cero devoluciones." },
+  { p:"Saco de boxeo de escritorio antiestrés", rubro:"Escritorio y Setup", score:78, prov:"1688 (减压拳击)",
+    w:"Producto de impulso puro con video que se comparte solo. Ticket bajo: venderlo en combo." },
+  { p:"Bolsa-manta plegable 2 en 1", rubro:"Camping y Outdoor", score:79, prov:"1688 (户外野餐垫)",
+    w:"Dos productos en uno, argumento de venta directo. Liviano y sin talles." },
+  { p:"Almohada cervical de memoria", rubro:"Salud y Ortopedia", score:85, prov:"1688 (记忆棉枕头)",
+    w:"Resuelve dolor real: se paga sin discutir. Voluminosa, calcular bien el flete." },
+  { p:"Corrector de postura ajustable", rubro:"Salud y Ortopedia", score:81, prov:"1688 (背部矫正带)",
+    w:"Dolor visible y demo clara. Cuidado con las promesas médicas en el copy." },
+  { p:"Cinturón lumbar de soporte", rubro:"Salud y Ortopedia", score:77, prov:"1688 (护腰带)",
+    w:"Público de trabajo físico, alta intención. Tiene talles: pocos y bien elegidos." },
+  { p:"Comedero antivoracidad", rubro:"Mascotas", score:88, prov:"Petcom · MAU · 1688 (慢食碗)",
+    w:"Problema visible, demo perfecta, liviano y sin variantes. El ancla del catálogo." },
+  { p:"Cepillo deshedding para perro y gato", rubro:"Mascotas", score:86, prov:"MAU · Happy Pet · 1688 (宠物梳)",
+    w:"El antes/después con el pelo suelto es contenido viral asegurado." },
+  { p:"Rodillo quitapelos con repuestos", rubro:"Mascotas", score:80, prov:"Happy Pet · 1688 (粘毛器)",
+    w:"Modelo maquinita y hojita: el repuesto es la recompra." },
+  { p:"Organizador de baúl plegable", rubro:"Auto y Moto", score:82, prov:"1688 (后备箱收纳箱)",
+    w:"Utilidad pura, público masivo y fácil de segmentar en Meta." },
+  { p:"Aspiradora de auto 12V", rubro:"Auto y Moto", score:76, prov:"1688 (车载吸尘器)",
+    w:"Alta intención de compra, pero enchufa: revisar certificación." },
+  { p:"Soporte magnético de celular para auto", rubro:"Auto y Moto", score:74, prov:"1688 (车载手机支架)",
+    w:"Impulso puro y ticket bajo. Sirve de satélite, no de ancla." },
+  { p:"Kit de bandas elásticas de resistencia", rubro:"Fitness y Deporte", score:79, prov:"1688 (阻力带)",
+    w:"Liviano, sin certificación, se vende en kit y recompran por nivel." },
+  { p:"Rueda abdominal con retorno automático", rubro:"Fitness y Deporte", score:75, prov:"1688 (健腹轮)",
+    w:"Demo clara y ticket medio. Rubro competitivo: ganás con contenido." },
+  { p:"Termo con pantalla de temperatura", rubro:"Cocina y Organización", score:83, prov:"1688 (智能保温杯)",
+    w:"Muy argentino, ticket medio-alto y es regalo. La pantalla es el gancho del video." },
+  { p:"Set matero con grabado personalizado", rubro:"Cocina y Organización", score:85, prov:"Proveedor local + grabado láser",
+    w:"Demanda enorme, sin talles, y la personalización te da margen y te hace difícil de copiar." },
+  { p:"Organizador modular de alacena", rubro:"Cocina y Organización", score:77, prov:"1688 (厨房收纳)",
+    w:"Demo de 15 segundos y se vende en sets, que te sube el ticket." },
+  { p:"Cortador multifunción de verduras", rubro:"Cocina y Organización", score:70, prov:"1688 (多功能切菜器)",
+    w:"El clásico del video demo. Mucha competencia: sólo con ángulo propio." },
+  { p:"Bolso térmico plegable", rubro:"Camping y Outdoor", score:76, prov:"1688 (保温袋)",
+    w:"Estacional fuerte de verano. Liviano y fácil de brandear." },
+  { p:"Silla plegable ultraliviana", rubro:"Camping y Outdoor", score:74, prov:"1688 (折叠椅)",
+    w:"Ticket alto y comunidad fiel, pero el volumen encarece el flete." },
+  { p:"Regadera automática por goteo", rubro:"Jardín y Plantas", score:81, prov:"1688 (自动滴灌)",
+    w:"Nicho apasionado y poco explotado acá. Resuelve el irte de vacaciones." },
+  { p:"Guantes de jardinería con garras", rubro:"Jardín y Plantas", score:73, prov:"1688 (园艺手套)",
+    w:"Impulso barato con demo simpática. Satélite ideal." },
+  { p:"Organizador de cochecito de bebé", rubro:"Bebés y Maternidad", score:84, prov:"1688 (婴儿车挂袋)",
+    w:"Compran sin regatear. Liviano, sin talles y con recompra por regalo." },
+  { p:"Termómetro infrarrojo sin contacto", rubro:"Bebés y Maternidad", score:72, prov:"1688 (红外体温计)",
+    w:"Alta intención pero puede caer en producto médico: verificar antes de traer." },
+  { p:"Mochila antirrobo con puerto USB", rubro:"Bolsos y Mochilas", score:80, prov:"1688 (防盗背包)",
+    w:"Ticket medio-alto y marca propia natural. Textil paga derechos altos: costear fino." },
+  { p:"Lámpara de escritorio con carga inalámbrica", rubro:"Iluminación y Deco", score:71, prov:"1688 (无线充电台灯)",
+    w:"Muy visual y barata de pautar, pero enchufa: seguridad eléctrica sí o sí." },
+  { p:"Humidificador difusor de aromas", rubro:"Wellness y Masajes", score:75, prov:"1688 (加湿器)",
+    w:"Video precioso y recompra por las esencias. Enchufa: revisar certificación." },
+  { p:"Afeitadora corporal sumergible", rubro:"Belleza y Cuidado", score:73, prov:"1688 (身体剃须刀)",
+    w:"Voltra la tiene entre sus más vendidos. Rubro saturado: entrar sólo con ángulo claro." }
 ];
 
 /* ---------- Ideas para el botón 🎲 ---------- */

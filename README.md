@@ -7,6 +7,15 @@ App para relevar y puntuar productos antes de comprar stock.
 ## Correr
 Abrí `index.html` en el navegador, o entrá al link de arriba. No necesita servidor.
 
+## Autocompletado
+Pegá el link del producto y se completan solos proveedor, país, tipo, origen y WhatsApp a partir del dominio, más el nombre desde la URL. Nunca pisa lo que ya cargaste a mano. Los dominios conocidos están en `DOMINIOS` (`data.js`) — sumá los tuyos ahí.
+
+## Fotos
+Campo de imagen por producto, con miniatura en la tabla. Sin foto, muestra un mosaico con el ícono y el color del rubro.
+
+## Temas
+Claro · Oscuro suave · Oscuro, arriba a la izquierda. Volver a tocar el activo vuelve a seguir al sistema.
+
 ## Instalar en el celular
 - **Android / Chrome** — botón **⤓ Instalar** arriba, o el menú del navegador → "Instalar app".
 - **iPhone / Safari** — Compartir → **Agregar a inicio**. El botón ⤓ te muestra los pasos.
@@ -23,12 +32,12 @@ git add -A && git commit -m "..." && git push
 Si tocás archivos cacheados, subí `VERSION` en `sw.js` para invalidar el cache viejo.
 
 ## Qué hace
-- **Dashboard** — KPIs, top de categorías por score, ranking de productos, recomendación al azar.
+- **Dashboard** — 🔥 **Caliente de hoy** (candidato distinto cada día, con su score, rubro y dónde buscarlo), KPIs, top de categorías, ranking y recomendación al azar.
 - **Productos** — tabla ordenable y filtrable. Costo puesto, margen y score calculados solos. Cada fila termina en tres botones: **abrir el producto**, **WhatsApp con el proveedor** (con el mensaje ya escrito) y **eliminar**. Los dos primeros quedan apagados hasta que cargues el dato.
 
 ### WhatsApp
 Cargá el teléfono en el producto. Se asume Argentina: se limpian el 0 de área y el 15, y se antepone 549. Para otro país escribilo con `+` adelante y se respeta tal cual. El mensaje que abre ya trae las dos preguntas obligatorias: precio mayorista, mínimo de compra y factura A.
-- **Rubros** — score promedio y estrellas por categoría.
+- **Rubros** — 22 rubros con dos medidores: **Explotado** (competencia que ya hay) y **Proyección** (potencial). La **Oportunidad** combina las dos y ordena la grilla. Tocá uno y te filtra los productos de ese rubro.
 - **Proveedores** — los relevados, con bandera del país, link y WhatsApp. Marca cuáles ya estás usando.
 
 ### País del proveedor

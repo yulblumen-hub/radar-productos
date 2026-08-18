@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v8";
+const APP_VER = "v9";
 const KEY  = "radar-productos-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
@@ -18,7 +18,7 @@ const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2
 let settings = { mult: MULT_PUESTO };
 let seedVer  = 0;
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -96,6 +96,34 @@ function veredictoSugerido(s){
 /* Arma el link de WhatsApp. Si el número empieza con "+" se respeta tal cual;
    si no, se asume Argentina: se limpia el 0 de área y el 15, y se antepone 549. */
 /* El país del proveedor no siempre coincide con el origen de la mercadería. */
+/* Al pegar un link: deduce proveedor, país, tipo y origen del dominio,
+   y propone un nombre a partir del slug. No sobreescribe lo que ya cargaste. */
+function desdeURL(url){
+  let host="", slug="";
+  try{
+    const u = new URL(url);
+    host = u.hostname.toLowerCase();
+    slug = decodeURIComponent(u.pathname).split("/").filter(Boolean).pop() || "";
+  }catch(e){ return null; }
+  const dom = DOMINIOS.find(x=>host.includes(x.m));
+  const nombre = slug
+    .replace(/\.(html?|php|aspx?)$/i,"")
+    .replace(/[-_+]/g," ")
+    .replace(/\b(offer|producto|product|item|p)\b/gi,"")
+    .replace(/\d{6,}/g,"")
+    .replace(/\s+/g," ").trim();
+  return {
+    proveedor: dom ? dom.prov : "",
+    paisProv:  dom ? dom.pais : "",
+    tipoProv:  dom ? dom.tipo : "",
+    origen:    dom ? dom.origen : "",
+    whatsapp:  dom && dom.wa ? dom.wa : "",
+    provUrl:   host ? `https://${host}/` : "",
+    nombre:    nombre ? nombre.charAt(0).toUpperCase()+nombre.slice(1) : "",
+    conocido:  !!dom
+  };
+}
+
 function paisDe(p){
   if(p.paisProv) return p.paisProv;
   const o = p.origen || "";
@@ -104,6 +132,34 @@ function paisDe(p){
   return "Otro";
 }
 function bandera(pais){ return BANDERAS[pais] || BANDERAS["Otro"]; }
+
+/* Mientras no haya foto, un mosaico estable derivado del rubro:
+   mismo rubro, mismo color, así la tabla se lee igual de rápido. */
+const IC_RUBRO = {
+  "Mascotas":"🐾","Wellness y Masajes":"💆","Bebés y Maternidad":"🍼","Escritorio y Setup":"🖥",
+  "Camping y Outdoor":"⛺","Auto y Moto":"🚗","Salud y Ortopedia":"🩺","Cocina y Organización":"🍳",
+  "Bolsos y Mochilas":"🎒","Limpieza del Hogar":"🧽","Fitness y Deporte":"🏋","Jardín y Plantas":"🪴",
+  "Viaje":"🧳","Herramientas":"🔧","Gaming":"🎮","Belleza y Cuidado":"💄","Iluminación y Deco":"💡",
+  "Joyería y Accesorios":"💍","Audio y Tecnología":"🎧","Juguetes y Juegos":"🧸","Papelería y Escolar":"✏️","Otro":"📦"
+};
+function tono(txt){
+  let h=0; for(let i=0;i<txt.length;i++) h=(h*31+txt.charCodeAt(i))>>>0;
+  return h % 360;
+}
+function nombreConFlecha(nombre){
+  const s = String(nombre||"");
+  const i = s.lastIndexOf(" ");
+  const cabeza = i<0 ? "" : esc(s.slice(0,i+1));
+  const cola   = esc(i<0 ? s : s.slice(i+1));
+  return `${cabeza}<span class="nowrap">${cola}<span class="flecha">↗</span></span>`;
+}
+
+function fotoHTML(p, tam){
+  const cls = tam==="lg" ? "foto foto-lg" : "foto";
+  if(p.img) return `<span class="${cls}"><img src="${esc(p.img)}" alt="" loading="lazy"
+      onerror="this.parentNode.classList.add('rota');this.remove()"><i>${IC_RUBRO[p.rubro]||"📦"}</i></span>`;
+  return `<span class="${cls} vacia" style="--tono:${tono(p.rubro||"Otro")}"><i>${IC_RUBRO[p.rubro]||"📦"}</i></span>`;
+}
 
 function waNumero(tel){
   if(!tel) return "";
@@ -154,6 +210,53 @@ function scoreLine(s){
     <b class="num" style="color:${scoreColor(s)};font-size:12.5px">${s}</b></div>`;
 }
 
+/* ================= CALIENTE DEL DÍA ================= */
+/* Determinista por fecha: el mismo para todos ese día, distinto mañana. */
+function diaDelAnio(d=new Date()){
+  return Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+}
+function calienteDeHoy(){
+  const hoy = new Date();
+  const i = (diaDelAnio(hoy) + hoy.getFullYear()) % CALIENTES.length;
+  return CALIENTES[i];
+}
+function calienteHTML(){
+  const c = calienteDeHoy();
+  const m = metaRubro(c.rubro);
+  const yaEsta = state.productos.some(p=>p.nombre.toLowerCase() === c.p.toLowerCase());
+  return `
+  <div class="hot">
+    <div class="hot-tag">🔥 Caliente de hoy</div>
+    <div class="hot-cuerpo">
+      <div class="hot-icono">${IC_RUBRO[c.rubro]||"📦"}</div>
+      <div class="hot-txt">
+        <h3>${esc(c.p)}</h3>
+        <div class="hot-meta">${esc(c.rubro)} · oportunidad del rubro <b>${oportunidad(c.rubro)}</b>/100</div>
+        <p>${esc(c.w)}</p>
+        <div class="hot-prov"><b>Dónde buscarlo:</b> ${esc(c.prov)}</div>
+      </div>
+      <div class="hot-score">
+        <div class="hot-n" style="color:${scoreColor(c.score)}">${c.score}</div>
+        <div class="lbl">score est.</div>
+      </div>
+    </div>
+    <div class="hot-pie">
+      ${yaEsta
+        ? `<span class="hintline">Ya lo tenés en el radar.</span>`
+        : `<button class="btn primary" onclick="nuevoDesdeCaliente()">+ Sumarlo al radar</button>`}
+      <span class="hintline">Cambia todos los días</span>
+    </div>
+  </div>`;
+}
+function nuevoDesdeCaliente(){
+  const c = calienteDeHoy();
+  openModal(null);
+  state.editing.nombre = c.p;
+  state.editing.rubro  = RUBROS.includes(c.rubro) ? c.rubro : "Otro";
+  state.editing.notas  = c.w;
+  renderModal();
+}
+
 /* ================= VISTAS ================= */
 
 function vDashboard(){
@@ -176,6 +279,8 @@ function vDashboard(){
   const avgGlobal = ps.length ? Math.round(ps.reduce((s,p)=>s+score(p),0)/ps.length) : 0;
 
   return `
+  <div class="section">${calienteHTML()}</div>
+
   <div class="section">
     <div class="kpis">
       <div class="kpi"><div class="n">${ps.length}</div><div class="l">Productos</div></div>
@@ -270,10 +375,14 @@ function vProductos(){
     <tbody>${ps.map(p=>{
       const m=margen(p), s=score(p);
       return `<tr onclick="openModal('${p.id}')">
-        <td><div class="pname">${p.url
-              ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Abrir el producto">${esc(p.nombre)} <span style="font-size:10px;opacity:.6">↗</span></a>`
-              : esc(p.nombre)}</div>
-            <div class="psub">${(p.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div></td>
+        <td><div class="celda-prod">
+            ${fotoHTML(p)}
+            <div class="celda-txt">
+              <div class="pname">${p.url
+                ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Abrir el producto">${nombreConFlecha(p.nombre)}</a>`
+                : esc(p.nombre)}</div>
+              <div class="psub">${(p.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
+            </div></div></td>
         <td style="color:var(--tx2)">${esc(p.rubro||"—")}</td>
         <td>${p.provUrl?`<a href="${esc(p.provUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(p.proveedor||"link")}</a>`:esc(p.proveedor||"—")}
             <div class="psub"><span class="pais"><span class="bandera">${bandera(paisDe(p))}</span>${esc(paisDe(p))}</span>
@@ -299,26 +408,68 @@ function vProductos(){
 }
 
 function vRubros(){
-  const map={};
+  const mios={};
   state.productos.forEach(p=>{
     const r=p.rubro||"Otro";
-    (map[r] ||= {n:0,sum:0,estrellas:0,items:[]});
-    map[r].n++; map[r].sum+=score(p); map[r].items.push(p);
-    if(p.veredicto==="estrella") map[r].estrellas++;
+    (mios[r] ||= {n:0,sum:0,estrellas:0,items:[]});
+    mios[r].n++; mios[r].sum+=score(p); mios[r].items.push(p);
+    if(p.veredicto==="estrella") mios[r].estrellas++;
   });
-  const rows=Object.entries(map).map(([r,d])=>({r,...d,avg:Math.round(d.sum/d.n)}))
-    .sort((a,b)=>b.avg-a.avg);
-  if(!rows.length) return `<div class="empty"><div class="big">📦</div>Cargá productos y acá vas a ver el análisis por rubro.</div>`;
 
-  return `<div class="cardgrid">${rows.map(d=>`
-    <div class="minicard">
-      <h3><span class="dot" style="background:${scoreColor(d.avg)}"></span>${esc(d.r)}</h3>
-      <div class="meta">${d.n} producto${d.n===1?"":"s"} · ${d.estrellas} estrella${d.estrellas===1?"":"s"}</div>
-      ${scoreLine(d.avg)}
-      <p>${d.items.sort((a,b)=>score(b)-score(a)).slice(0,4)
-          .map(p=>`<span class="tag">${esc(p.nombre)} · ${score(p)}</span>`).join("")}</p>
-    </div>`).join("")}</div>`;
+  const filas = RUBROS_META
+    .filter(m=>m.n!=="Otro" || mios["Otro"])
+    .map(m=>({...m, op:oportunidad(m.n), mio:mios[m.n]||null}))
+    .sort((a,b)=> (state.rubroOrden==="mios" ? (b.mio?b.mio.n:0)-(a.mio?a.mio.n:0) : 0) || b.op-a.op);
+
+  const medidor = (v, color, etiqueta) => `
+    <div class="med">
+      <div class="med-top"><span>${etiqueta}</span><b style="color:${color}">${v}</b></div>
+      <div class="med-track"><i style="width:${v}%;background:${color}"></i></div>
+    </div>`;
+
+  return `
+  <div class="section-h">
+    <h2>Rubros</h2>
+    <span class="hint">ordenados por oportunidad — cuánto potencial queda sin tomar</span>
+    <span class="spacer"></span>
+    <div class="segmented">
+      <button class="${state.rubroOrden!=="mios"?"on":""}" onclick="setOrdenRubro('op')">Oportunidad</button>
+      <button class="${state.rubroOrden==="mios"?"on":""}" onclick="setOrdenRubro('mios')">Los míos</button>
+    </div>
+  </div>
+
+  <div class="rubrogrid">
+  ${filas.map(f=>{
+    const cOp   = f.op>=45 ? "var(--acc)" : f.op>=30 ? "var(--warn)" : "var(--bad)";
+    const cExp  = f.explotado>=70 ? "var(--bad)" : f.explotado>=50 ? "var(--warn)" : "var(--acc)";
+    const cProy = f.proyeccion>=78 ? "var(--acc)" : f.proyeccion>=60 ? "var(--warn)" : "var(--bad)";
+    return `
+    <div class="rubro ${f.mio?"tiene":""}" onclick="verRubro('${esc(f.n)}')">
+      <div class="rubro-top">
+        <span class="rubro-ic" style="--tono:${tono(f.n)}">${IC_RUBRO[f.n]||"📦"}</span>
+        <div class="rubro-id">
+          <h3>${esc(f.n)}</h3>
+          <div class="rubro-sub">${f.mio ? `${f.mio.n} tuyo${f.mio.n===1?"":"s"} · score ${Math.round(f.mio.sum/f.mio.n)}${f.mio.estrellas?` · ${f.mio.estrellas}★`:""}` : "sin productos todavía"}</div>
+        </div>
+        <div class="rubro-op" title="Oportunidad = proyección menos saturación">
+          <b style="color:${cOp}">${f.op}</b><span>oport.</span>
+        </div>
+      </div>
+      ${medidor(f.explotado,  cExp,  "Explotado")}
+      ${medidor(f.proyeccion, cProy, "Proyección")}
+      <p class="rubro-nota">${esc(f.nota)}</p>
+    </div>`;}).join("")}
+  </div>
+
+  <p class="hintline" style="margin-top:14px">
+    <b>Explotado</b>: cuánta competencia ya hay en Argentina. <b>Proyección</b>: potencial de crecimiento y margen.
+    <b>Oportunidad</b> combina las dos. Son estimaciones de mercado para priorizar por dónde empezar, no datos duros —
+    validá siempre contra Mercado Libre antes de comprar.
+  </p>`;
 }
+
+function setOrdenRubro(k){ state.rubroOrden = k; render(); }
+function verRubro(n){ state.view="productos"; state.fRubro=n; state.q=""; render(); }
 
 function vProveedores(){
   const usados = {};
@@ -402,7 +553,7 @@ function setSort(k){
 function openModal(id){
   const p = id ? state.productos.find(x=>x.id===id) : null;
   state.editing = p ? {...p, crit:{...p.crit}, tags:[...(p.tags||[])], competidores:(p.competidores||[]).map(c=>({...c}))}
-                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"", whatsapp:"", paisProv:"Argentina",
+                    : { id:null, nombre:"", rubro:"Mascotas", tags:[], proveedor:"", provUrl:"", url:"", whatsapp:"", paisProv:"Argentina", img:"",
                         tipoProv:"Mayorista local", origen:"Argentina (importador)",
                         fob:"", venta:"", moq:"", competidores:[], veredicto:"evaluar", notas:"",
                         aplicaMult:true, mult:settings.mult,
@@ -471,9 +622,19 @@ function renderModal(){
     </div>
 
     <div class="frow one"><div class="field">
+      <label>Foto</label>
+      <div class="fotoedit">
+        <span id="fotoPrev">${fotoHTML(e,"lg")}</span>
+        <input class="input" data-f="img" value="${esc(e.img||"")}" placeholder="Pegá la URL de la imagen">
+      </div>
+      <div class="hintline">Botón derecho sobre la foto en el sitio del proveedor → "Copiar dirección de la imagen".</div>
+    </div></div>
+
+    <div class="frow one"><div class="field">
       <label>Link del producto</label>
       <input class="input" data-f="url" value="${esc(e.url||"")}" placeholder="https://… la ficha exacta del producto">
       <div class="hintline">La publicación puntual. Es el que abrís desde la tabla.</div>
+      <div class="hintline aviso" id="autoAviso" hidden></div>
     </div></div>
 
     <div class="frow one"><div class="field">
@@ -552,6 +713,10 @@ function renderModal(){
     el.oninput = el.onchange = ()=>{
       e[el.dataset.f] = el.value;
       if(["fob","venta"].includes(el.dataset.f)) refreshScore(); // in-place: no perder el foco
+      if(el.dataset.f === "img"){
+        const pv = $("#fotoPrev"); if(pv) pv.innerHTML = fotoHTML(e,"lg");
+      }
+      if(el.dataset.f === "url") autocompletar(el.value);
       if(el.dataset.f === "whatsapp"){
         const h = $("#waHint");
         if(h) h.textContent = e.whatsapp
@@ -615,6 +780,47 @@ function deleteProducto(){
 }
 /* Un botón apagado no puede ser un callejón sin salida: abre el producto
    con el campo que falta enfocado. */
+/* Rellena solo lo que está vacío: nunca pisa lo que cargaste a mano. */
+function autocompletar(url){
+  const e = state.editing;
+  if(!e || !url || url.length < 12) return;
+  const d = desdeURL(url);
+  if(!d) return;
+  const campos = ["proveedor","paisProv","tipoProv","origen","whatsapp","provUrl","nombre"];
+  /* En un producto nuevo, los valores por defecto cuentan como vacíos: si no,
+     "Mayorista local" o "Argentina" bloquean la corrección del dominio.
+     En uno ya cargado sólo se completa lo que está realmente en blanco. */
+  const DEF = { proveedor:"", paisProv:"Argentina", tipoProv:"Mayorista local",
+                origen:"Argentina (importador)", whatsapp:"", provUrl:"", nombre:"" };
+  const nuevo = !e.id;
+  const libre = {};
+  campos.forEach(k=>{
+    const actual = (e[k]||"").toString().trim();
+    libre[k] = !actual || (nuevo && actual === DEF[k]);
+  });
+  let tocados = [];
+  campos.forEach(k=>{
+    if(!d[k] || !libre[k]) return;
+    e[k] = d[k]; tocados.push(k);
+  });
+  if(!tocados.length) return;
+  /* repintar solo los inputs afectados, sin re-renderizar (perderíamos el foco) */
+  tocados.forEach(k=>{
+    const el = $(`[data-f="${k}"]`);
+    if(!el) return;
+    el.value = e[k];                       // sirve igual para input y para select
+    el.classList.add("autollenado");
+  });
+  const aviso = $("#autoAviso");
+  if(aviso){
+    aviso.textContent = d.conocido
+      ? `Completado desde ${d.proveedor}: ${tocados.length} campo${tocados.length===1?"":"s"}`
+      : `Dominio nuevo — completé lo que pude (${tocados.length})`;
+    aviso.hidden = false;
+    setTimeout(()=>{ aviso.hidden = true; $$(".autollenado").forEach(x=>x.classList.remove("autollenado")); }, 3500);
+  }
+}
+
 function pedirDato(id, campo){
   openModal(id);
   /* el modal recién se muestra: hasta que el navegador no recalcula el layout,
@@ -699,6 +905,32 @@ $("#fileInput").onchange= e=>{ if(e.target.files[0]) importar(e.target.files[0])
 $("#modalBack").onclick = e=>{ if(e.target.id==="modalBack") closeModal(); };
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#modalBack").hidden) closeModal(); });
 
+
+/* ================= TEMA ================= */
+(function(){
+  const TKEY="radar-tema";
+  const botones=$$("[data-tema]");
+  if(!botones.length) return;
+  const pintar=()=>{
+    let t=null; try{ t=localStorage.getItem(TKEY); }catch(e){}
+    botones.forEach(b=>b.classList.toggle("on", b.dataset.tema===t));
+  };
+  botones.forEach(b=>{
+    b.onclick=()=>{
+      const t=b.dataset.tema;
+      let actual=null; try{ actual=localStorage.getItem(TKEY); }catch(e){}
+      if(actual===t){                       // volver a seguir al sistema
+        document.documentElement.removeAttribute("data-theme");
+        try{ localStorage.removeItem(TKEY); }catch(e){}
+      }else{
+        document.documentElement.setAttribute("data-theme",t);
+        try{ localStorage.setItem(TKEY,t); }catch(e){}
+      }
+      pintar();
+    };
+  });
+  pintar();
+})();
 
 /* ================= INSTALACIÓN (PWA) ================= */
 (function(){
