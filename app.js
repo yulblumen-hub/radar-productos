@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v13";
+const APP_VER = "v14";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -170,6 +170,13 @@ function desdeURL(url){
     nombre:    nombre ? nombre.charAt(0).toUpperCase()+nombre.slice(1) : "",
     conocido:  !!dom
   };
+}
+
+/* Elegir una fuente sin poder romper la vista: si la clase pedida no existe,
+   cae a la primera disponible. Que falte un link no puede dejar la app en blanco. */
+function fuente(rubro, clase){
+  const bs = buscadoresDe(rubro||"Otro");
+  return bs.find(b=>b.clase===clase) || bs[0] || { n:"—", url:"#", term:rubro||"" };
 }
 
 function paisDe(p){
@@ -1046,6 +1053,9 @@ function sumarDesdeTienda(p){
 function render(){
   $$(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===state.view));
   const v = state.view;
+  /* Si una vista falla, se muestra el error en su lugar: una excepción no puede
+     dejar la app entera en blanco. */
+  try{
   $("#app").innerHTML =
       v==="dashboard"   ? vDashboard()
     : v==="productos"   ? vProductos()
@@ -1053,6 +1063,20 @@ function render(){
     : v==="tiendas"     ? vTiendas()
     : v==="proveedores" ? vProveedores()
     :                     vNichos();
+  }catch(err){
+    console.error("Falló la vista", v, err);
+    $("#app").innerHTML = `
+      <div class="empty">
+        <div class="big">⚠️</div>
+        <b>Se rompió la vista “${esc(v)}”.</b>
+        <p class="hintline" style="margin-top:8px">${esc(String(err && err.message || err))}</p>
+        <p style="margin-top:14px">
+          <button class="btn ghost" onclick="state.view='dashboard';render()">Ir al inicio</button>
+          <button class="btn ghost" onclick="location.reload()">Recargar</button>
+        </p>
+      </div>`;
+    return;
+  }
 
   if(v==="tiendas"){
     pintarTiendas();
@@ -1120,8 +1144,7 @@ function mejorProvHTML(e){
            : `<button class="btn ghost mini" id="usarMejor">Usar este</button>`}
     </div>`;
   }
-  const bs = buscadoresDe(e.rubro||"Otro");
-  const p  = bs.find(b=>b.clase==="plataforma");
+  const p = fuente(e.rubro, "nacional");
   return `<div class="mejorprov vacio">
     <div><span class="hintline">Todavía no guardaste proveedores de este rubro, así que no puedo elegir el mejor.</span>
       <div style="margin-top:5px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Buscar “${esc(p.term)}” en ${esc(p.n)} ↗</a></div></div>
@@ -1206,7 +1229,7 @@ function renderModal(){
       <div id="mkProd">${hayMercado()
         ? `<p class="hintline">Consultando Mercado Libre…</p>`
         : `<div class="mercado vacio"><p class="hintline">Todavía no está conectada la API de Mercado Libre.
-             Mientras tanto: <a href="${esc(buscadoresDe(e.rubro||"Otro").find(b=>b.clase==="competencia").url)}" target="_blank" rel="noopener">ver la competencia a mano ↗</a>.
+             Mientras tanto: <a href="${esc(fuente(e.rubro,"competencia").url)}" target="_blank" rel="noopener">ver la competencia a mano ↗</a>.
              Para conectarla, seguí <code>worker/README.md</code>.</p></div>`}</div>
     </div></div>
 
@@ -1478,9 +1501,8 @@ function randomIdea(){
 function recoHTML(c){
   const est   = aEstrellas(c.score);
   const m     = metaRubro(c.rubro);
-  const bs    = buscadoresDe(c.rubro);
-  const prov  = bs.find(b=>b.clase==="plataforma");
-  const compe = bs.find(b=>b.clase==="competencia");
+  const prov  = fuente(c.rubro, "nacional");
+  const compe = fuente(c.rubro, "competencia");
   const mio   = mejorProveedor(c.rubro);
   const yaEsta= state.productos.some(p=>p.nombre.toLowerCase()===c.p.toLowerCase());
   return `
