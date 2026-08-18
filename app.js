@@ -1,8 +1,9 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v9";
+const APP_VER = "v10";
 const KEY  = "radar-productos-v1";
+const PKEY = "radar-proveedores-v1";
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -17,8 +18,9 @@ const uid = () => "p"+Date.now().toString(36)+Math.random().toString(36).slice(2
 
 let settings = { mult: MULT_PUESTO };
 let seedVer  = 0;
+let misProv  = [];
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"op", reco:null, rubroAbierto:null, qRubro:"", fMacro:"", fMacroNicho:"", nichoTop:45, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -30,6 +32,10 @@ function load(){
       seedVer  = s.seedVer || 0;
     }
   }catch(e){ /* settings por defecto */ }
+  try{
+    const mp = localStorage.getItem(PKEY);
+    if(mp) misProv = JSON.parse(mp) || [];
+  }catch(e){}
   try{
     const raw = localStorage.getItem(KEY);
     if(raw){
@@ -47,6 +53,43 @@ function load(){
 /* Los productos de ejemplo se guardan en el navegador la primera vez, así que
    una corrección posterior nunca llegaba. Ahora los que no tocaste se
    actualizan solos; los que editaste quedan intactos. */
+function sumarProveedor(p){
+  const clave = (p.n+"|"+(p.rubro||"")).toLowerCase();
+  if(misProv.some(x=>(x.n+"|"+(x.rubro||"")).toLowerCase()===clave)){
+    toast("Ya lo tenías en tu lista"); return;
+  }
+  misProv.push({...p, rating:0, resenas:"", ventas:"", precio:"", nota:"", id:uid()});
+  save(); render();
+  toast(`${p.n} sumado a tus proveedores`);
+}
+function borrarProveedor(id){
+  const p = misProv.find(x=>x.id===id);
+  if(!p || !confirm(`¿Sacar ${p.n} de tu lista?`)) return;
+  misProv = misProv.filter(x=>x.id!==id);
+  save(); render();
+}
+function puntuarProveedor(id, n){
+  const p = misProv.find(x=>x.id===id);
+  if(!p) return;
+  p.rating = (p.rating===n ? 0 : n);
+  save(); render();
+}
+function campoProveedor(id, k, v){
+  const p = misProv.find(x=>x.id===id);
+  if(!p) return;
+  p[k]=v; save();
+}
+
+/* El mejor proveedor de un rubro: primero calificación, después precio. */
+function mejorProveedor(rubro){
+  const cands = misProv.filter(p=>p.rubro===rubro && (p.rating || p.precio));
+  if(!cands.length) return null;
+  return cands.slice().sort((a,b)=>
+    (b.rating-a.rating) ||
+    ((Number(a.precio)||Infinity)-(Number(b.precio)||Infinity))
+  )[0];
+}
+
 function refrescarSeed(){
   if(seedVer >= SEED_VER) return;
   let n = 0;
@@ -70,6 +113,7 @@ function migrar(p){
 function save(){
   try{
     localStorage.setItem(KEY, JSON.stringify(state.productos));
+    localStorage.setItem(PKEY, JSON.stringify(misProv));
     localStorage.setItem(SKEY, JSON.stringify({...settings, seedVer}));
   }catch(e){ toast("No se pudo guardar (almacenamiento lleno)"); }
 }
@@ -135,13 +179,14 @@ function bandera(pais){ return BANDERAS[pais] || BANDERAS["Otro"]; }
 
 /* Mientras no haya foto, un mosaico estable derivado del rubro:
    mismo rubro, mismo color, así la tabla se lee igual de rápido. */
-const IC_RUBRO = {
-  "Mascotas":"🐾","Wellness y Masajes":"💆","Bebés y Maternidad":"🍼","Escritorio y Setup":"🖥",
-  "Camping y Outdoor":"⛺","Auto y Moto":"🚗","Salud y Ortopedia":"🩺","Cocina y Organización":"🍳",
-  "Bolsos y Mochilas":"🎒","Limpieza del Hogar":"🧽","Fitness y Deporte":"🏋","Jardín y Plantas":"🪴",
-  "Viaje":"🧳","Herramientas":"🔧","Gaming":"🎮","Belleza y Cuidado":"💄","Iluminación y Deco":"💡",
-  "Joyería y Accesorios":"💍","Audio y Tecnología":"🎧","Juguetes y Juegos":"🧸","Papelería y Escolar":"✏️","Otro":"📦"
+const IC_MACRO = {
+  "Mascotas":"🐾","Wellness":"💆","Salud":"🩺","Hogar":"🏠","Jardín":"🪴","Oficina":"🖥",
+  "Auto":"🚗","Outdoor":"⛺","Fitness":"🏋","Bebés":"🍼","Belleza":"💄","Tecnología":"🔌",
+  "Gaming":"🎮","Viaje":"🧳","Moda":"👜","Niños":"🧸","Herramientas":"🔧","Eventos":"🎉",
+  "Emergentes":"🚀","Otro":"📦"
 };
+const icoRubro = n => IC_MACRO[metaRubro(n).cat] || "📦";
+
 function tono(txt){
   let h=0; for(let i=0;i<txt.length;i++) h=(h*31+txt.charCodeAt(i))>>>0;
   return h % 360;
@@ -157,8 +202,8 @@ function nombreConFlecha(nombre){
 function fotoHTML(p, tam){
   const cls = tam==="lg" ? "foto foto-lg" : "foto";
   if(p.img) return `<span class="${cls}"><img src="${esc(p.img)}" alt="" loading="lazy"
-      onerror="this.parentNode.classList.add('rota');this.remove()"><i>${IC_RUBRO[p.rubro]||"📦"}</i></span>`;
-  return `<span class="${cls} vacia" style="--tono:${tono(p.rubro||"Otro")}"><i>${IC_RUBRO[p.rubro]||"📦"}</i></span>`;
+      onerror="this.parentNode.classList.add('rota');this.remove()"><i>${icoRubro(p.rubro)}</i></span>`;
+  return `<span class="${cls} vacia" style="--tono:${tono(p.rubro||"Otro")}"><i>${icoRubro(p.rubro)}</i></span>`;
 }
 
 function waNumero(tel){
@@ -228,7 +273,7 @@ function calienteHTML(){
   <div class="hot">
     <div class="hot-tag">🔥 Caliente de hoy</div>
     <div class="hot-cuerpo">
-      <div class="hot-icono">${IC_RUBRO[c.rubro]||"📦"}</div>
+      <div class="hot-icono">${icoRubro(c.rubro)}</div>
       <div class="hot-txt">
         <h3>${esc(c.p)}</h3>
         <div class="hot-meta">${esc(c.rubro)} · oportunidad del rubro <b>${oportunidad(c.rubro)}</b>/100</div>
@@ -249,12 +294,8 @@ function calienteHTML(){
   </div>`;
 }
 function nuevoDesdeCaliente(){
-  const c = calienteDeHoy();
-  openModal(null);
-  state.editing.nombre = c.p;
-  state.editing.rubro  = RUBROS.includes(c.rubro) ? c.rubro : "Otro";
-  state.editing.notas  = c.w;
-  renderModal();
+  state.reco = calienteDeHoy();
+  nuevoDesdeReco();
 }
 
 /* ================= VISTAS ================= */
@@ -318,9 +359,9 @@ function vDashboard(){
 
   <div class="section" style="margin-top:14px">
     <div class="card" id="ideaCard">
-      <div class="section-h"><h2>🎲 Recomendación al azar</h2>
-        <span class="hint">tocá "Tirame uno" arriba para otra</span></div>
-      <div id="ideaBox"><p class="hintline">Dale al botón 🎲 y te tiro un producto con el porqué.</p></div>
+      <div class="section-h"><h2>🎲 Recomendación analizada</h2>
+        <span class="hint">con proveedor, precio de referencia y competencia real</span></div>
+      <div id="ideaBox">${recoHTML(state.reco || CALIENTES[(diaDelAnio()*7)%CALIENTES.length])}</div>
     </div>
   </div>`;
 }
@@ -407,94 +448,317 @@ function vProductos(){
   ` : `<div class="empty"><div class="big">🔍</div>No hay productos con esos filtros.</div>`}`;
 }
 
+const ORDENES = [
+  { k:"op",    n:"Oportunidad" },
+  { k:"tend",  n:"Tendencia" },
+  { k:"exp+",  n:"Más explotados" },
+  { k:"exp-",  n:"Menos explotados" },
+  { k:"az",    n:"A → Z" },
+  { k:"za",    n:"Z → A" }
+];
+const PESO_ORD = { subiendo:2, estable:1, bajando:0 };
+
+function ordenarRubros(arr, k){
+  const c=[...arr];
+  if(k==="az")   return c.sort((a,b)=>a.n.localeCompare(b.n,"es"));
+  if(k==="za")   return c.sort((a,b)=>b.n.localeCompare(a.n,"es"));
+  if(k==="exp+") return c.sort((a,b)=>b.explotado-a.explotado);
+  if(k==="exp-") return c.sort((a,b)=>a.explotado-b.explotado);
+  if(k==="tend") return c.sort((a,b)=> (PESO_ORD[b.tend]-PESO_ORD[a.tend]) || b.proyeccion-a.proyeccion);
+  return c.sort((a,b)=>oportunidad(b.n)-oportunidad(a.n));
+}
+
+const FLECHA_TEND = { subiendo:"▲", estable:"—", bajando:"▼" };
+const COLOR_TEND  = { subiendo:"var(--acc)", estable:"var(--tx3)", bajando:"var(--bad)" };
+
 function vRubros(){
   const mios={};
   state.productos.forEach(p=>{
     const r=p.rubro||"Otro";
-    (mios[r] ||= {n:0,sum:0,estrellas:0,items:[]});
-    mios[r].n++; mios[r].sum+=score(p); mios[r].items.push(p);
+    (mios[r] ||= {n:0,sum:0,estrellas:0});
+    mios[r].n++; mios[r].sum+=score(p);
     if(p.veredicto==="estrella") mios[r].estrellas++;
   });
 
-  const filas = RUBROS_META
-    .filter(m=>m.n!=="Otro" || mios["Otro"])
-    .map(m=>({...m, op:oportunidad(m.n), mio:mios[m.n]||null}))
-    .sort((a,b)=> (state.rubroOrden==="mios" ? (b.mio?b.mio.n:0)-(a.mio?a.mio.n:0) : 0) || b.op-a.op);
+  const q=(state.qRubro||"").toLowerCase();
+  let base = RUBROS_META.filter(m=>{
+    if(m.n==="Otro" && !mios["Otro"]) return false;
+    if(state.fMacro && m.cat!==state.fMacro) return false;
+    if(q && !(m.n+" "+m.cat+" "+m.nota).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  base = ordenarRubros(base, state.rubroOrden||"op");
 
-  const medidor = (v, color, etiqueta) => `
-    <div class="med">
-      <div class="med-top"><span>${etiqueta}</span><b style="color:${color}">${v}</b></div>
-      <div class="med-track"><i style="width:${v}%;background:${color}"></i></div>
-    </div>`;
+  const medidor=(v,color,etq)=>`
+    <div class="med"><div class="med-top"><span>${etq}</span><b style="color:${color}">${v}</b></div>
+    <div class="med-track"><i style="width:${v}%;background:${color}"></i></div></div>`;
 
   return `
   <div class="section-h">
     <h2>Rubros</h2>
-    <span class="hint">ordenados por oportunidad — cuánto potencial queda sin tomar</span>
-    <span class="spacer"></span>
-    <div class="segmented">
-      <button class="${state.rubroOrden!=="mios"?"on":""}" onclick="setOrdenRubro('op')">Oportunidad</button>
-      <button class="${state.rubroOrden==="mios"?"on":""}" onclick="setOrdenRubro('mios')">Los míos</button>
+    <span class="hint">${base.length} de ${RUBROS_META.length} · tocá uno para ver proveedores</span>
+  </div>
+
+  <div class="toolbar">
+    <input class="input" id="qRubro" placeholder="Buscar rubro…" value="${esc(state.qRubro||"")}">
+    <select class="input" id="fMacro">
+      <option value="">Todas las categorías</option>
+      ${MACROS.map(c=>`<option value="${esc(c)}" ${c===state.fMacro?"selected":""}>${IC_MACRO[c]||""} ${esc(c)}</option>`).join("")}
+    </select>
+    <div class="segmented wrap">
+      ${ORDENES.map(o=>`<button class="${(state.rubroOrden||"op")===o.k?"on":""}" onclick="setOrdenRubro('${o.k}')">${o.n}</button>`).join("")}
     </div>
   </div>
 
   <div class="rubrogrid">
-  ${filas.map(f=>{
-    const cOp   = f.op>=45 ? "var(--acc)" : f.op>=30 ? "var(--warn)" : "var(--bad)";
-    const cExp  = f.explotado>=70 ? "var(--bad)" : f.explotado>=50 ? "var(--warn)" : "var(--acc)";
-    const cProy = f.proyeccion>=78 ? "var(--acc)" : f.proyeccion>=60 ? "var(--warn)" : "var(--bad)";
+  ${base.map(f=>{
+    const op=oportunidad(f.n), mio=mios[f.n];
+    const cOp  = op>=55?"var(--acc)":op>=38?"var(--warn)":"var(--bad)";
+    const cExp = f.explotado>=70?"var(--bad)":f.explotado>=50?"var(--warn)":"var(--acc)";
+    const cPro = f.proyeccion>=78?"var(--acc)":f.proyeccion>=60?"var(--warn)":"var(--bad)";
+    const abierto = state.rubroAbierto===f.n;
     return `
-    <div class="rubro ${f.mio?"tiene":""}" onclick="verRubro('${esc(f.n)}')">
-      <div class="rubro-top">
-        <span class="rubro-ic" style="--tono:${tono(f.n)}">${IC_RUBRO[f.n]||"📦"}</span>
+    <div class="rubro ${mio?"tiene":""} ${abierto?"abierto":""}">
+      <div class="rubro-top" onclick="abrirRubro('${esc(f.n).replace(/'/g,"\\'")}')">
+        <span class="rubro-ic" style="--tono:${tono(f.cat)}">${IC_MACRO[f.cat]||"📦"}</span>
         <div class="rubro-id">
           <h3>${esc(f.n)}</h3>
-          <div class="rubro-sub">${f.mio ? `${f.mio.n} tuyo${f.mio.n===1?"":"s"} · score ${Math.round(f.mio.sum/f.mio.n)}${f.mio.estrellas?` · ${f.mio.estrellas}★`:""}` : "sin productos todavía"}</div>
+          <div class="rubro-sub">${esc(f.cat)} · <span style="color:${COLOR_TEND[f.tend]}">${FLECHA_TEND[f.tend]} ${f.tend}</span>${mio?` · <b style="color:var(--acc)">${mio.n} tuyo${mio.n===1?"":"s"}</b>`:""}</div>
         </div>
-        <div class="rubro-op" title="Oportunidad = proyección menos saturación">
-          <b style="color:${cOp}">${f.op}</b><span>oport.</span>
-        </div>
+        <div class="rubro-op"><b style="color:${cOp}">${op}</b><span>oport.</span></div>
       </div>
-      ${medidor(f.explotado,  cExp,  "Explotado")}
-      ${medidor(f.proyeccion, cProy, "Proyección")}
+      ${medidor(f.explotado,cExp,"Explotado")}
+      ${medidor(f.proyeccion,cPro,"Proyección")}
       <p class="rubro-nota">${esc(f.nota)}</p>
+      ${abierto ? panelRubro(f) : `
+      <div class="rubro-pie">
+        <button class="btn ghost mini" onclick="abrirRubro('${esc(f.n).replace(/'/g,"\\'")}')">Proveedores y competencia</button>
+        ${mio?`<button class="btn ghost mini" onclick="verRubro('${esc(f.n).replace(/'/g,"\\'")}')">Ver mis ${mio.n}</button>`:""}
+      </div>`}
     </div>`;}).join("")}
   </div>
 
-  <p class="hintline" style="margin-top:14px">
-    <b>Explotado</b>: cuánta competencia ya hay en Argentina. <b>Proyección</b>: potencial de crecimiento y margen.
-    <b>Oportunidad</b> combina las dos. Son estimaciones de mercado para priorizar por dónde empezar, no datos duros —
+  ${base.length?"":`<div class="empty"><div class="big">🔍</div>Ningún rubro con ese filtro.</div>`}
+
+  <p class="hintline" style="margin-top:16px">
+    <b>Explotado</b>: competencia que ya hay en Argentina. <b>Proyección</b>: potencial de crecimiento y margen.
+    <b>Oportunidad</b> combina ambas con la tendencia. Son estimaciones para priorizar, no datos duros:
     validá siempre contra Mercado Libre antes de comprar.
   </p>`;
 }
 
-function setOrdenRubro(k){ state.rubroOrden = k; render(); }
+/* Proveedores del rubro: búsquedas reales, no una lista inventada. */
+function panelRubro(f){
+  const bs = buscadoresDe(f.n);
+  const provs = bs.filter(b=>b.clase==="plataforma");
+  const comp  = bs.filter(b=>b.clase==="competencia");
+  const dir   = PROVEEDORES.filter(p=>p.rubro==="Todos" || (p.rubros||[]).includes(f.cat) || p.rubro===f.cat);
+  const fila = b => `
+    <div class="prov-row">
+      <div class="prov-id">
+        <b>${esc(b.n)}</b>
+        <span class="prov-meta">${bandera(b.pais)} ${esc(b.pais)} · mín. ${esc(b.minimo)} · ${esc(b.idioma)}</span>
+      </div>
+      <a class="btn ghost mini" href="${esc(b.url)}" target="_blank" rel="noopener">Buscar “${esc(b.term)}” ↗</a>
+      <button class="accbtn" title="Sumarlo a mis proveedores"
+        onclick='sumarProveedor(${JSON.stringify({n:b.n,pais:b.pais,clase:b.clase,url:b.url,rubro:f.n}).replace(/'/g,"&#39;")})'>+</button>
+    </div>`;
+  return `
+  <div class="rubro-panel">
+    <div class="panel-h">Dónde buscarlo <span class="hint">término: <code>${esc(f.term||f.n)}</code></span></div>
+    ${provs.map(fila).join("")}
+    <div class="panel-h">Competencia y precio de venta</div>
+    ${comp.map(fila).join("")}
+    ${dir.length?`<div class="panel-h">Proveedores verificados</div>
+      ${dir.map(p=>`<div class="prov-row">
+        <div class="prov-id"><b>${esc(p.nombre)}</b>
+          <span class="prov-meta">${bandera(p.pais)} ${esc(p.pais)} · ${esc(p.tipo)}</span></div>
+        <a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
+        ${p.whatsapp?`<a class="accbtn wa" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">${ICO.wa}</a>`:""}
+      </div>`).join("")}`:""}
+    <div class="rubro-pie">
+      <button class="btn ghost mini" onclick="abrirRubro(null)">Cerrar</button>
+      <button class="btn primary mini" onclick="nuevoEnRubro('${esc(f.n).replace(/'/g,"\\'")}')">+ Producto en este rubro</button>
+    </div>
+  </div>`;
+}
+
+/* un handler global por proveedor para las estrellas del listado */
+function instalarHandlersEstrellas(){
+  misProv.forEach(p=>{ window["puntuarProv_"+p.id] = n => puntuarProveedor(p.id, n); });
+}
+
+function setOrdenRubro(k){ state.rubroOrden=k; render(); }
+function abrirRubro(n){ state.rubroAbierto = (state.rubroAbierto===n ? null : n); render(); }
 function verRubro(n){ state.view="productos"; state.fRubro=n; state.q=""; render(); }
+function nuevoEnRubro(n){ openModal(null); state.editing.rubro=n; renderModal(); }
+
+const estrellasHTML = (n, onclick) => [1,2,3,4,5].map(i=>
+  `<span class="est ${i<=n?"on":""}" ${onclick?`onclick="${onclick}(${i})"`:""}>★</span>`).join("");
+
+/* score 0-100 y estrellas 1-5 son la misma nota en dos escalas */
+const aEstrellas = s => Math.max(1, Math.min(5, Math.round(s/20)));
 
 function vProveedores(){
-  const usados = {};
+  const usados={};
   state.productos.forEach(p=>{ if(p.proveedor) usados[p.proveedor]=(usados[p.proveedor]||0)+1; });
+
+  const plataformas = PLATAFORMAS.filter(p=>p.clase==="plataforma");
+  const directos    = PROVEEDORES.filter(p=>p.tipo!=="1688" && p.tipo!=="Alibaba");
+
   return `
-  <div class="section-h"><h2>Proveedores relevados</h2>
+  <div class="section-h"><h2>Proveedores</h2>
     <span class="hint">preguntá siempre: «¿me hacés factura A?» y «¿cuál es el mínimo?»</span></div>
-  <div class="cardgrid">${PROVEEDORES.map(v=>`
-    <div class="minicard">
-      <h3><span class="bandera bandera-lg">${bandera(v.pais)}</span>${esc(v.nombre)}</h3>
-      <div class="meta">${esc(v.tipo)} · <b style="color:${v.pais==="Argentina"?"var(--acc)":"var(--warn)"}">${esc(v.pais)}</b> · ${esc(v.rubro)}${usados[v.nombre]?` · <b style="color:var(--acc)">${usados[v.nombre]} producto${usados[v.nombre]===1?"":"s"}</b>`:""}</div>
-      <p>${esc(v.nota)}</p>
-      <p style="margin-top:9px"><a href="${esc(v.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a>
-        ${v.whatsapp?` · <a href="https://wa.me/${waNumero(v.whatsapp)}" target="_blank" rel="noopener">WhatsApp ↗</a>`:""}</p>
-    </div>`).join("")}</div>`;
+
+  <div class="bloque">
+    <div class="bloque-h">
+      <h3>🌐 Plataformas</h3>
+      <span class="hint">No son fábricas: son buscadores de fábricas. Entrás desde el rubro con el término ya cargado.</span>
+    </div>
+    <div class="cardgrid">
+    ${plataformas.map(p=>`
+      <div class="minicard">
+        <h3><span class="bandera bandera-lg">${bandera(p.pais)}</span>${esc(p.n)}</h3>
+        <div class="meta">${esc(p.pais)} · mín. ${esc(p.minimo)} · ${esc(p.idioma)}</div>
+        <p>${esc(p.nota)}</p>
+      </div>`).join("")}
+    </div>
+    <p class="hintline" style="margin-top:10px">Para buscar en una: andá a <b>Rubros</b>, abrí el rubro y usá los links — llevan el término correcto (en chino donde corresponde).</p>
+  </div>
+
+  <div class="bloque">
+    <div class="bloque-h">
+      <h3>🏭 Proveedores directos verificados</h3>
+      <span class="hint">Los abrí y confirmé uno por uno. El resto lo tenés que verificar vos.</span>
+    </div>
+    <div class="cardgrid">
+    ${directos.map(v=>`
+      <div class="minicard">
+        <h3><span class="bandera bandera-lg">${bandera(v.pais)}</span>${esc(v.nombre)}</h3>
+        <div class="meta">${esc(v.tipo)} · <b style="color:${v.pais==="Argentina"?"var(--acc)":"var(--warn)"}">${esc(v.pais)}</b>${usados[v.nombre]?` · <b style="color:var(--acc)">${usados[v.nombre]} producto${usados[v.nombre]===1?"":"s"}</b>`:""}</div>
+        <p>${esc(v.nota)}</p>
+        <p style="margin-top:9px">
+          <a href="${esc(v.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a>
+          ${v.whatsapp?` · <a href="https://wa.me/${waNumero(v.whatsapp)}" target="_blank" rel="noopener">WhatsApp ↗</a>`:""}
+        </p>
+      </div>`).join("")}
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="bloque-h">
+      <h3>⭐ Mis proveedores</h3>
+      <span class="hint">${misProv.length} guardado${misProv.length===1?"":"s"} · calificalos cuando cotices y el mejor se propone solo en el producto</span>
+    </div>
+    ${misProv.length ? `
+    <div class="tablewrap"><table>
+      <thead><tr>
+        <th>Proveedor</th><th>Rubro</th><th>Calificación</th>
+        <th class="num">Precio US$</th><th>Reseñas</th><th>Ventas</th><th></th>
+      </tr></thead>
+      <tbody>${misProv.map(p=>`
+        <tr>
+          <td><div class="pname">${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.n)} <span class="flecha">↗</span></a>`:esc(p.n)}</div>
+              <div class="psub"><span class="pais"><span class="bandera">${bandera(p.pais)}</span>${esc(p.pais)}</span> · ${esc(p.clase)}</div></td>
+          <td style="color:var(--tx2)">${esc(p.rubro||"—")}</td>
+          <td class="estrellas">${estrellasHTML(p.rating, `puntuarProv_${p.id}`)}</td>
+          <td class="num"><input class="input mini" type="number" step="0.01" value="${esc(p.precio)}"
+                onchange="campoProveedor('${p.id}','precio',this.value)"></td>
+          <td><input class="input mini" value="${esc(p.resenas)}" placeholder="4.8 / 300"
+                onchange="campoProveedor('${p.id}','resenas',this.value)"></td>
+          <td><input class="input mini" value="${esc(p.ventas)}" placeholder="500+/mes"
+                onchange="campoProveedor('${p.id}','ventas',this.value)"></td>
+          <td><button class="accbtn del" onclick="borrarProveedor('${p.id}')">${ICO.tacho}</button></td>
+        </tr>`).join("")}</tbody>
+    </table></div>
+    <p class="hintline" style="margin-top:10px">La calificación y las reseñas las cargás vos con lo que veas al cotizar — no me los invento. El producto propone el de mejor calificación y, a igual nota, el más barato.</p>
+    ` : `<div class="empty"><div class="big">⭐</div>Todavía no sumaste ninguno.<br>
+         Andá a <b>Rubros</b>, abrí uno y tocá <b>+</b> en el proveedor que te sirva.</div>`}
+  </div>`;
+}
+
+const COLOR_MACRO = {};
+MACROS.forEach(c=>COLOR_MACRO[c]=tono(c));
+
+/* Empaquetado en espiral, determinista y sin librerías.
+   La colisión se calcula en espacio circular puro: mezclar el achatado con
+   el circular era lo que hacía que algunas burbujas se pisaran. */
+function empaquetar(items, ancho, alto){
+  const GAP=4, puestos=[];
+  const cx=ancho/2, cy=alto/2;
+  items.forEach((it,idx)=>{
+    const r=it.r;
+    if(idx===0){ puestos.push({...it,x:cx,y:cy}); return; }
+    let ang=0, rad=r+items[0].r+GAP, x=cx, y=cy, chocado=true, iter=0;
+    while(chocado && iter<20000){
+      x = cx + Math.cos(ang)*rad;
+      y = cy + Math.sin(ang)*rad;
+      chocado = x-r<GAP || x+r>ancho-GAP || y-r<GAP || y+r>alto-GAP
+             || puestos.some(p=>Math.hypot(p.x-x, p.y-y) < p.r + r + GAP);
+      ang += Math.max(0.02, 5/rad);
+      if(ang >= Math.PI*2){ ang=0; rad+=5; }
+      iter++;
+    }
+    if(!chocado) puestos.push({...it,x,y});
+  });
+  return puestos;
 }
 
 function vNichos(){
+  const cuantos = state.nichoTop||45;
+  const arr = RUBROS_META
+    .filter(m=>m.n!=="Otro")
+    .filter(m=>!state.fMacroNicho || m.cat===state.fMacroNicho)
+    .map(m=>({...m, op:oportunidad(m.n)}))
+    .sort((a,b)=>b.op-a.op)
+    .slice(0,cuantos);
+
+  const W=1000, H=760;
+  const rMin=19, rMax=52;
+  const min=Math.min(...arr.map(x=>x.op)), max=Math.max(...arr.map(x=>x.op));
+  const burbujas = arr.map(m=>({
+    ...m,
+    r: rMin + (max===min?0.5:(m.op-min)/(max-min)) * (rMax-rMin)
+  }));
+  const puestos = empaquetar(burbujas, W, H);
+
   return `
-  <div class="section-h"><h2>Nichos evaluados</h2>
-    <span class="hint">buscamos funcionales: que vendan por utilidad, con recompra</span></div>
-  <div class="cardgrid" style="grid-template-columns:repeat(auto-fill,minmax(330px,1fr))">
+  <div class="section-h"><h2>Mapa de nichos</h2>
+    <span class="hint">el tamaño es la oportunidad · tocá una burbuja para abrir el rubro</span></div>
+
+  <div class="toolbar">
+    <select class="input" id="fMacroNicho">
+      <option value="">Todas las categorías</option>
+      ${MACROS.filter(c=>c!=="Otro").map(c=>`<option value="${esc(c)}" ${c===state.fMacroNicho?"selected":""}>${IC_MACRO[c]||""} ${esc(c)}</option>`).join("")}
+    </select>
+    <div class="segmented">
+      ${[25,45,80].map(n=>`<button class="${cuantos===n?"on":""}" onclick="setNichoTop(${n})">Top ${n}</button>`).join("")}
+    </div>
+  </div>
+
+  <div class="mapa card">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa de nichos por oportunidad">
+      ${puestos.map(b=>{
+        const t=COLOR_MACRO[b.cat]||200;
+        const chico=b.r<26;
+        return `<g class="burbuja" onclick="irARubro('${esc(b.n).replace(/'/g,"\\'")}')">
+          <title>${esc(b.n)} — oportunidad ${b.op} · explotado ${b.explotado} · proyección ${b.proyeccion}</title>
+          <circle cx="${b.x.toFixed(1)}" cy="${b.y.toFixed(1)}" r="${b.r.toFixed(1)}"
+                  fill="hsl(${t} 62% 45% / .26)" stroke="hsl(${t} 62% 52%)" stroke-width="1.5"/>
+          <text x="${b.x.toFixed(1)}" y="${(b.y - (chico?0:5)).toFixed(1)}" class="b-num">${b.op}</text>
+          ${chico?"":`<text x="${b.x.toFixed(1)}" y="${(b.y+11).toFixed(1)}" class="b-txt">${esc(b.n.length>16?b.n.slice(0,15)+"…":b.n)}</text>`}
+        </g>`;}).join("")}
+    </svg>
+  </div>
+
+  <div class="leyenda">
+    ${MACROS.filter(c=>c!=="Otro").map(c=>`<span class="lg"><i style="background:hsl(${COLOR_MACRO[c]} 62% 52%)"></i>${IC_MACRO[c]||""} ${esc(c)}</span>`).join("")}
+  </div>
+
+  <div class="cardgrid" style="margin-top:18px">
   ${NICHOS.map((n,i)=>`
     <div class="minicard nicho" style="border-left-color:${scoreColor(n.score)}">
-      <div class="rank">#${i+1}</div>
+      <div class="rank">#${i+1} de los evaluados a fondo</div>
       <h3>${esc(n.nombre)}</h3>
       <div class="meta">${esc(n.veredicto)}</div>
       ${scoreLine(n.score)}
@@ -505,7 +769,8 @@ function vNichos(){
         <b style="color:var(--tx)">Ancla:</b> ${esc(n.ancla)}<br>
         <b style="color:var(--tx)">Satélites:</b> ${esc(n.satelites)}<br>
         <b style="color:var(--tx)">Recompra:</b> ${esc(n.recompra)}</p>
-    </div>`).join("")}</div>
+    </div>`).join("")}
+  </div>
 
   <div class="card" style="margin-top:18px">
     <div class="section-h"><h2>La arquitectura</h2></div>
@@ -518,6 +783,8 @@ function vNichos(){
       por eso el nicho con recompra no es un detalle, es la condición para que exista el negocio.</p>
   </div>`;
 }
+function setNichoTop(n){ state.nichoTop=n; render(); }
+function irARubro(n){ state.view="rubros"; state.rubroAbierto=n; state.qRubro=n; render(); }
 
 /* ================= RENDER ================= */
 function render(){
@@ -530,6 +797,14 @@ function render(){
     : v==="proveedores" ? vProveedores()
     :                     vNichos();
 
+  if(v==="rubros"){
+    const q=$("#qRubro");
+    if(q){ q.oninput=e=>{ state.qRubro=e.target.value; render(); const n=$("#qRubro"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }; }
+    const fm=$("#fMacro"); if(fm) fm.onchange=e=>{ state.fMacro=e.target.value; render(); };
+  }
+  if(v==="nichos"){
+    const fn=$("#fMacroNicho"); if(fn) fn.onchange=e=>{ state.fMacroNicho=e.target.value; render(); };
+  }
   if(v==="productos"){
     const q=$("#q");
     q.oninput = e=>{ state.q=e.target.value; render(); q.focus(); q.setSelectionRange(q.value.length,q.value.length); };
@@ -564,6 +839,30 @@ function openModal(id){
   $("#modalBack").hidden = false;
 }
 function closeModal(){ $("#modalBack").hidden = true; state.editing=null; }
+
+/* Propone el mejor proveedor del rubro entre los que guardaste:
+   primero calificación, y a igual nota, el más barato. */
+function mejorProvHTML(e){
+  const m = mejorProveedor(e.rubro);
+  if(m){
+    const ya = (e.proveedor||"").toLowerCase()===m.n.toLowerCase();
+    return `<div class="mejorprov">
+      <div>
+        <b>${esc(m.n)}</b> <span class="estrellas">${estrellasHTML(m.rating)}</span>
+        <div class="hintline">${bandera(m.pais)} ${esc(m.pais)}${m.precio?` · US$ ${esc(m.precio)}`:""}${m.resenas?` · ${esc(m.resenas)}`:""}</div>
+      </div>
+      ${ya ? `<span class="hintline">Ya es el de este producto</span>`
+           : `<button class="btn ghost mini" id="usarMejor">Usar este</button>`}
+    </div>`;
+  }
+  const bs = buscadoresDe(e.rubro||"Otro");
+  const p  = bs.find(b=>b.clase==="plataforma");
+  return `<div class="mejorprov vacio">
+    <div><span class="hintline">Todavía no guardaste proveedores de este rubro, así que no puedo elegir el mejor.</span>
+      <div style="margin-top:5px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Buscar “${esc(p.term)}” en ${esc(p.n)} ↗</a></div></div>
+    <button class="btn ghost mini" onclick="irARubro('${esc(e.rubro||"Otro").replace(/'/g,"\\'")}')">Ver el rubro</button>
+  </div>`;
+}
 
 function scoreBoxHTML(e){
   const s = score(e), m = margen(e);
@@ -635,6 +934,11 @@ function renderModal(){
       <input class="input" data-f="url" value="${esc(e.url||"")}" placeholder="https://… la ficha exacta del producto">
       <div class="hintline">La publicación puntual. Es el que abrís desde la tabla.</div>
       <div class="hintline aviso" id="autoAviso" hidden></div>
+    </div></div>
+
+    <div class="frow one"><div class="field">
+      <label>Mejor proveedor para este rubro</label>
+      <div id="mejorProv">${mejorProvHTML(e)}</div>
     </div></div>
 
     <div class="frow one"><div class="field">
@@ -713,6 +1017,9 @@ function renderModal(){
     el.oninput = el.onchange = ()=>{
       e[el.dataset.f] = el.value;
       if(["fob","venta"].includes(el.dataset.f)) refreshScore(); // in-place: no perder el foco
+      if(el.dataset.f === "rubro"){
+        const mp=$("#mejorProv"); if(mp) mp.innerHTML = mejorProvHTML(e);
+      }
       if(el.dataset.f === "img"){
         const pv = $("#fotoPrev"); if(pv) pv.innerHTML = fotoHTML(e,"lg");
       }
@@ -741,6 +1048,18 @@ function renderModal(){
   $$("[data-delcomp]",$("#modalBody")).forEach(el=>{
     el.onclick = ()=>{ e.competidores.splice(+el.dataset.delcomp,1); renderModal(); };
   });
+  const usarMejor = $("#usarMejor");
+  if(usarMejor) usarMejor.onclick = ()=>{
+    const m = mejorProveedor(e.rubro);
+    if(!m) return;
+    e.proveedor = m.n; e.provUrl = m.url||""; e.paisProv = m.pais||e.paisProv;
+    ["proveedor","provUrl","paisProv"].forEach(k=>{
+      const el=$(`[data-f="${k}"]`); if(el){ el.value=e[k]; el.classList.add("autollenado"); }
+    });
+    $("#mejorProv").innerHTML = mejorProvHTML(e);
+    toast("Proveedor aplicado");
+  };
+
   $("#swMult").onchange = ev=>{
     e.aplicaMult = ev.target.checked;
     $("#multVal").disabled = !e.aplicaMult;
@@ -872,19 +1191,73 @@ function importar(file){
   rd.readAsText(file);
 }
 function randomIdea(){
-  const i = IDEAS[Math.floor(Math.random()*IDEAS.length)];
-  if(state.view!=="dashboard"){ state.view="dashboard"; render(); }
+  state.reco = CALIENTES[Math.floor(Math.random()*CALIENTES.length)];
+  if(state.view!=="dashboard"){ state.view="dashboard"; render(); return; }
   const box = $("#ideaBox");
-  if(box) box.innerHTML = `
-    <h3 style="font-size:17px;margin-bottom:4px">${esc(i.p)}</h3>
-    <div class="meta" style="font-size:12px;color:var(--tx3);margin-bottom:9px">${esc(i.r)}</div>
-    <p style="font-size:13.5px;color:var(--tx2);margin:0 0 13px">${esc(i.w)}</p>
-    <button class="btn primary" onclick="nuevoDesdeIdea('${esc(i.p).replace(/'/g,"\\'")}','${esc(i.r)}')">+ Agregarlo al radar</button>`;
+  if(box) box.innerHTML = recoHTML(state.reco);
 }
-function nuevoDesdeIdea(nombre, rubro){
+
+/* Tarjeta completa: imagen, rubro, estrellas paralelas al score,
+   proveedor sugerido y dónde mirar precio y competencia. */
+function recoHTML(c){
+  const est   = aEstrellas(c.score);
+  const m     = metaRubro(c.rubro);
+  const bs    = buscadoresDe(c.rubro);
+  const prov  = bs.find(b=>b.clase==="plataforma");
+  const compe = bs.find(b=>b.clase==="competencia");
+  const mio   = mejorProveedor(c.rubro);
+  const yaEsta= state.productos.some(p=>p.nombre.toLowerCase()===c.p.toLowerCase());
+  return `
+  <div class="reco">
+    <div class="reco-img" style="--tono:${tono(m.cat)}"><span>${IC_MACRO[m.cat]||"📦"}</span></div>
+    <div class="reco-cuerpo">
+      <h3>${esc(c.p)}</h3>
+      <div class="reco-rubro">
+        <span class="tag">${IC_MACRO[m.cat]||""} ${esc(c.rubro)}</span>
+        <span class="tag">${esc(m.cat)}</span>
+        <span class="tag" style="color:${COLOR_TEND[m.tend]}">${FLECHA_TEND[m.tend]} ${m.tend}</span>
+      </div>
+      <div class="reco-nota">
+        <span class="estrellas grande">${estrellasHTML(est)}</span>
+        <b style="color:${scoreColor(c.score)}">${est}/5</b>
+        <span class="hintline" style="margin:0">· score ${c.score}/100 — la misma nota en dos escalas</span>
+      </div>
+      <p class="reco-w">${esc(c.w)}</p>
+      <div class="reco-datos">
+        <div>
+          <span class="lbl">Proveedor sugerido</span>
+          ${mio
+            ? `<b>${esc(mio.n)}</b> <span class="hintline">de los tuyos · ${mio.rating}★${mio.precio?` · US$ ${esc(mio.precio)}`:""}</span>`
+            : `<a href="${esc(prov.url)}" target="_blank" rel="noopener">${esc(prov.n)}: buscar “${esc(prov.term)}” ↗</a>`}
+          <div class="hintline">${esc(c.prov)}</div>
+        </div>
+        <div>
+          <span class="lbl">Precio de venta y competencia</span>
+          <a href="${esc(compe.url)}" target="_blank" rel="noopener">Ver en Mercado Libre ↗</a>
+          <div class="hintline">Mirá los 5 primeros: si venden mucho hay demanda, y su precio es tu techo.</div>
+        </div>
+      </div>
+    </div>
+    <div class="reco-pie">
+      ${yaEsta ? `<span class="hintline">Ya está en tu radar.</span>`
+               : `<button class="btn primary" onclick="nuevoDesdeReco()">+ Sumarlo al radar</button>`}
+      <button class="btn ghost" onclick="randomIdea()">🎲 Otro</button>
+    </div>
+  </div>`;
+}
+
+function nuevoDesdeReco(){
+  const c = state.reco || calienteDeHoy();
   openModal(null);
-  state.editing.nombre = nombre;
-  state.editing.rubro  = RUBROS.includes(rubro) ? rubro : "Otro";
+  state.editing.nombre = c.p;
+  state.editing.rubro  = RUBROS.includes(c.rubro) ? c.rubro : "Otro";
+  state.editing.notas  = c.w;
+  const mio = mejorProveedor(c.rubro);
+  if(mio){
+    state.editing.proveedor = mio.n;
+    state.editing.provUrl   = mio.url||"";
+    state.editing.paisProv  = mio.pais||"Argentina";
+  }
   renderModal();
 }
 

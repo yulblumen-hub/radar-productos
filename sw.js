@@ -1,6 +1,6 @@
 /* Cache-first para el caparazón, con actualización en segundo plano.
    Subí VERSION en cada deploy para invalidar el cache viejo. */
-const VERSION = "radar-v9";
+const VERSION = "radar-v10";
 const ASSETS = ["./","./index.html","./styles.css","./app.js","./data.js",
                 "./manifest.json","./icon-192.png","./icon-512.png","./icon-maskable-512.png"];
 
