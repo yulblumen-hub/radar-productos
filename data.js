@@ -203,6 +203,15 @@ const PROVEEDORES = [
    Vacío = la app funciona igual, sólo que con links en vez de datos. */
 const API_MERCADO = "";
 
+/* Proxy de catálogos (carpeta worker/). Sin esto sólo se pueden leer las
+   tiendas Shopify, que son las únicas que mandan CORS. */
+const API_CATALOGO = "";
+
+/* Confiabilidad para ordenar resultados: primero el que fabrica, después el que
+   importa, después el que revende. Es lo que define quién te da mejor precio y
+   quién te puede reponer. */
+const PESO_TIPO = { "Fabricante":100, "Importador":85, "Distribuidor":70, "Mayorista":60, "Tienda":40, "Directorio":10 };
+
 /* ---------- Tiendas a espiar ----------
    Toda tienda Shopify expone su catálogo en /products.json: productos, precios,
    descuento, stock, fecha de publicación e imágenes. Sin credenciales y con CORS

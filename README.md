@@ -7,6 +7,14 @@ App para relevar y puntuar productos antes de comprar stock.
 ## Correr
 Abrí `index.html` en el navegador, o entrá al link de arriba. No necesita servidor.
 
+## Buscador de ofertas
+Escribís "tabla para picada" en el buscador del inicio y la app consulta los catálogos de los proveedores cargados, no Google. Devuelve **producto real, foto real, precio y link directo a la ficha**, en dos grupos separados:
+
+- **Dónde comprarlo** — proveedores, ordenados por confiabilidad (fabricante > importador > distribuidor) y después por precio.
+- **A cuánto lo venden** — tiendas que espiás. No son proveedores: son la competencia y el precio a batir.
+
+⚠️ **Casi todos los proveedores bloquean la lectura desde el navegador.** Sólo Shopify manda las cabeceras que hacen falta; WooCommerce y Tienda Nube no. Por eso hay un proxy en [`worker/`](worker/) que **no necesita credenciales de nada**: se despliega en Cloudflare y la búsqueda pasa de 1 fuente a las 35.
+
 ## Tiendas (espía de catálogos)
 Toda tienda **Shopify** expone su catálogo completo en `/products.json`: productos, precios, descuento, stock, fecha de publicación e imágenes. Sin credenciales y con CORS abierto, así que la app lo lee directo desde el navegador — no hace falta backend.
 

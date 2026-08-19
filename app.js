@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v21";
+const APP_VER = "v23";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -286,6 +286,171 @@ function scoreLine(s){
     <b class="num" style="color:${scoreColor(s)};font-size:12.5px">${s}</b></div>`;
 }
 
+/* ================= BUSCADOR DE OFERTAS ================= */
+/* Esto es lo que el usuario pidió: escribís "tabla para picada" y te trae
+   ofertas reales de proveedores, con foto, precio y link directo a la ficha.
+   Sin worker sólo alcanzan las tiendas Shopify; con worker, todos. */
+
+const hayCatalogo = () => typeof API_CATALOGO === "string" && API_CATALOGO.length > 8;
+const ofertasCache = new Map();
+
+/* Los sitios donde buscar: proveedores verificados + tiendas que espiás. */
+function sitiosDeBusqueda(){
+  const s = [];
+  DIRECTORIO.forEach(p=>{
+    if(p.tipo!=="Directorio") s.push({ url:p.url, nombre:p.n, tipo:p.tipo, zona:p.zona });
+  });
+  PROVEEDORES.filter(p=>p.pais==="Argentina" && p.url).forEach(p=>{
+    if(!s.some(x=>x.nombre===p.nombre)) s.push({ url:p.url, nombre:p.nombre, tipo:p.tipo||"Distribuidor", zona:"Argentina" });
+  });
+  /* Las tiendas espiadas NO son proveedores: son competencia. Van marcadas
+     aparte porque sirven para saber a cuánto se vende, no dónde comprar. */
+  (state.tiendas||[]).forEach(t=> s.push({ url:t.url, nombre:t.nombre, tipo:"Competencia", zona:"Argentina", competencia:true }));
+  return s;
+}
+
+const raizDe = u => { try{ return new URL(u).origin; }catch(e){ return u; } };
+
+function confiabilidad(base, sitios){
+  const s = sitios.find(x=>raizDe(x.url)===raizDe(base));
+  return {
+    peso: s ? (PESO_TIPO[s.tipo]||50) : 30,
+    nombre: s ? s.nombre : raizDe(base).replace(/^https?:\/\//,""),
+    tipo: s ? s.tipo : "",
+    competencia: !!(s && s.competencia)
+  };
+}
+
+async function buscarOfertas(q){
+  const clave = q.toLowerCase().trim();
+  if(clave.length < 2) return null;
+  if(ofertasCache.has(clave)) return ofertasCache.get(clave);
+
+  const sitios = sitiosDeBusqueda();
+  const prom = (async ()=>{
+    let items = [], consultados = 0, respondieron = 0;
+
+    if(hayCatalogo()){
+      const urls = sitios.map(s=>s.url).join(",");
+      try{
+        const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(q)}&sitios=${encodeURIComponent(urls)}`);
+        const j = await r.json();
+        items = j.resultados || [];
+        consultados = j.consultados || 0;
+        respondieron = j.respondieron || 0;
+      }catch(e){ /* seguimos con lo que se pueda leer directo */ }
+    }
+
+    if(!items.length){
+      /* Sin worker sólo se pueden leer las tiendas Shopify, que son las únicas
+         que mandan CORS. El resto queda para cuando esté el proxy. */
+      const candidatos = sitios.filter(s=>!sitiosMudos.has(limpiarDominio(s.url)));
+      const tandas = await Promise.all(candidatos.map(async s=>{
+        consultados++;
+        const d = await traerTienda(s.url);
+        if(d.error || !d.productos) return [];
+        respondieron++;
+        return d.productos
+          .map(p=>({ ...p, base:s.url, punta:puntaje(p.titulo,q) }))
+          .filter(p=>p.punta>0);
+      }));
+      items = tandas.flat();
+    }
+
+    const conf = items.map(p=>{
+      const c = confiabilidad(p.base, sitios);
+      return { ...p, prov:c.nombre, provTipo:c.tipo, conf:c.peso, competencia:c.competencia };
+    });
+    /* Orden: primero cuánto coincide, después confiabilidad, después precio. */
+    const orden=(x,y)=> y.punta-x.punta || y.conf-x.conf || (x.precio||1e12)-(y.precio||1e12);
+    return {
+      q,
+      proveedores: conf.filter(p=>!p.competencia).sort(orden),
+      competencia: conf.filter(p=>p.competencia).sort(orden),
+      consultados, respondieron, conWorker:hayCatalogo()
+    };
+  })();
+
+  ofertasCache.set(clave, prom);
+  return prom;
+}
+
+function puntaje(titulo, termino){
+  const t=String(titulo||"").toLowerCase(), q=termino.toLowerCase().trim();
+  if(!q) return 0;
+  if(t===q) return 100;
+  if(t.startsWith(q)) return 90;
+  if(t.includes(q)) return 75;
+  const ws=q.split(/\s+/).filter(w=>w.length>2);
+  if(!ws.length) return 0;
+  const h=ws.filter(w=>t.includes(w)).length;
+  return h ? Math.round(h/ws.length*60) : 0;
+}
+
+function ofertaHTML(p, i){
+  const off = p.antes>p.precio ? Math.round((1-p.precio/p.antes)*100) : 0;
+  return `
+  <div class="oferta">
+    <span class="of-pos">${i+1}</span>
+    <a class="of-foto" href="${esc(p.link)}" target="_blank" rel="noopener">
+      ${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy" onerror="this.closest('.of-foto').classList.add('vacia');this.remove()">`:""}
+    </a>
+    <div class="of-txt">
+      <a class="of-tit" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.titulo.slice(0,72))}</a>
+      <div class="of-prov">
+        <b>${esc(p.prov)}</b>${p.provTipo&&!p.competencia?` · ${esc(p.provTipo)}`:""}
+        ${p.stock===false?`<span class="of-sin">sin stock</span>`:""}
+      </div>
+    </div>
+    <div class="of-precio">
+      <b>${p.precio?pesos(p.precio):"consultar"}</b>
+      ${off?`<span class="off">${off}% off</span>`:""}
+    </div>
+    <a class="btn primary mini" href="${esc(p.link)}" target="_blank" rel="noopener">Ver ↗</a>
+  </div>`;
+}
+
+async function pintarOfertas(q){
+  const caja = $("#ofertas"); if(!caja) return;
+  caja.hidden = false;
+  caja.innerHTML = `<div class="of-cargando">Buscando “${esc(q)}” en ${sitiosDeBusqueda().length} proveedores…</div>`;
+  const r = await buscarOfertas(q);
+  const sigue = $("#ofertas"); if(!sigue || state.qGlobal.trim()!==q.trim()) return;
+
+  const totales = r ? r.proveedores.length + r.competencia.length : 0;
+  if(!r || !totales){
+    sigue.innerHTML = `
+      <div class="of-vacio">
+        <b>Sin ofertas para “${esc(q)}”.</b>
+        <p class="hintline">${r && !r.conWorker
+          ? `Sólo pude leer ${r.respondieron} de ${r.consultados} proveedores: el resto bloquea al navegador. Con el proxy de catálogos andando (<code>worker/</code>) se consultan todos.`
+          : "Probá con una palabra más general."}</p>
+      </div>`;
+    return;
+  }
+  sigue.innerHTML = `
+    <div class="of-cab">
+      <h3>“${esc(q)}”</h3>
+      <span class="hint">${r.respondieron} de ${r.consultados} fuentes respondieron</span>
+    </div>
+
+    ${r.proveedores.length ? `
+      <div class="of-grupo">
+        <div class="of-tit-grupo">🏢 Dónde comprarlo <span>${r.proveedores.length} · ordenado por confiabilidad y precio</span></div>
+        <div class="ofertas-lista">${r.proveedores.slice(0,15).map(ofertaHTML).join("")}</div>
+      </div>` : `
+      <div class="of-vacio"><b>Ningún proveedor tiene “${esc(q)}”.</b>
+      <p class="hintline">${r.conWorker?"Probá con una palabra más general.":"Casi ningún proveedor deja que el navegador lo lea. Con el proxy de catálogos se consultan todos."}</p></div>`}
+
+    ${r.competencia.length ? `
+      <div class="of-grupo">
+        <div class="of-tit-grupo">🎯 A cuánto lo venden <span>${r.competencia.length} · esto no es proveedor, es tu competencia</span></div>
+        <div class="ofertas-lista">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
+      </div>` : ""}
+
+    ${!r.conWorker?`<p class="hintline">Sólo se consultaron las fuentes que permiten lectura directa desde el navegador. Para consultarlas a todas, desplegá <code>worker/</code>.</p>`:""}`;
+}
+
 /* ================= FAVORITOS ================= */
 const esFav = (tipo, id) => (favoritos[tipo]||[]).includes(id);
 function toggleFav(tipo, id){
@@ -337,11 +502,22 @@ function limpiarDominio(u){
   try{ return new URL(s).origin; }catch(e){ return null; }
 }
 
+/* Los sitios que no permiten lectura desde el navegador no pueden hacernos
+   esperar: 6 segundos y afuera, y no se vuelven a intentar en la sesión. */
+const sitiosMudos = new Set();
+
+function conLimite(url, ms=6000){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  return fetch(url, {signal:ctrl.signal}).finally(()=>clearTimeout(t));
+}
+
 async function traerTienda(url){
   const base = limpiarDominio(url);
   if(!base) return { error:"La dirección no parece válida." };
+  if(sitiosMudos.has(base)) return { error:"Este sitio no permite lectura directa." };
   if(tiendaCache.has(base)) return tiendaCache.get(base);
-  const prom = fetch(`${base}/products.json?limit=250`)
+  const prom = conLimite(`${base}/products.json?limit=250`)
     .then(r=>{
       if(!r.ok) throw new Error("HTTP "+r.status);
       return r.json();
@@ -350,7 +526,10 @@ async function traerTienda(url){
       if(!j || !Array.isArray(j.products)) throw new Error("formato");
       return { productos: j.products.map(normalizarProd) };
     })
-    .catch(()=>({ error:"No pude leer el catálogo. Puede que la tienda no sea Shopify (Tienda Nube y WooCommerce no exponen este listado)." }));
+    .catch(()=>{
+      sitiosMudos.add(base);
+      return { error:"No pude leer el catálogo. Tienda Nube y WooCommerce no dejan que el navegador los lea: para esos hace falta el proxy de catálogos." };
+    });
   tiendaCache.set(base, prom);
   return prom;
 }
@@ -609,6 +788,8 @@ function vDashboard(){
   return `
   ${heroHTML()}
 
+  <div id="ofertas" class="ofertas" hidden></div>
+
   <div class="numeros">
     <div><b>${provTot}</b><span>proveedores</span></div>
     <div><b>${RUBROS_META.length-1}</b><span>rubros</span></div>
@@ -664,6 +845,51 @@ function vDashboard(){
   </div>`;
 }
 
+function exploradorHTML(){
+  const pool = CALIENTES.filter(c=>!state.productos.some(p=>p.nombre===c.p));
+  const hoy  = state.explorar || pool.slice(0,6);
+  return `
+  <div class="explorador">
+    <div class="of-cab">
+      <h3>🎲 Explorar candidatos</h3>
+      <span class="hint">productos analizados que todavía no tenés en el radar</span>
+      <button class="btn ghost mini" onclick="mezclarExplorar()">↻ Otros seis</button>
+    </div>
+    <div class="cardgrid">
+      ${hoy.map(c=>{
+        const m=metaRubro(c.rubro);
+        return `<div class="expl">
+          <div class="expl-cab">
+            <span class="rubro-ic" style="--tono:${tono(m.cat)}">${IC_MACRO[m.cat]||"📦"}</span>
+            <div>
+              <b>${esc(c.p)}</b>
+              <span class="expl-rubro">${esc(c.rubro)}</span>
+            </div>
+            <span class="expl-score" style="color:${scoreColor(c.score)}">${c.score}</span>
+          </div>
+          <p class="expl-w">${esc(c.w)}</p>
+          <div class="expl-pie">
+            <span class="tag">margen ${m.margen}%</span>
+            <span class="tag">oport. ${oportunidad(c.rubro)}</span>
+            <button class="btn ghost mini" onclick="buscarEsto('${esc(c.p).replace(/'/g,"\\'")}')">Ver ofertas</button>
+            <button class="btn primary mini" onclick="nuevoDesdeIdea('${esc(c.p).replace(/'/g,"\\'")}','${esc(c.rubro).replace(/'/g,"\\'")}')">+ Sumar</button>
+          </div>
+        </div>`;}).join("")}
+    </div>
+  </div>`;
+}
+function mezclarExplorar(){
+  const pool = CALIENTES.filter(c=>!state.productos.some(p=>p.nombre===c.p));
+  state.explorar = [...pool].sort(()=>Math.random()-0.5).slice(0,6);
+  render();
+}
+function buscarEsto(q){
+  state.view="dashboard"; state.qGlobal=q; render();
+  const h=$("#qHero"); if(h) h.value=q;
+  pintarOfertas(q);
+  setTimeout(()=>{ const o=$("#ofertas"); if(o) o.scrollIntoView({behavior:"smooth",block:"start"}); }, 60);
+}
+
 function vProductos(){
   let ps = state.productos.filter(p=>{
     const q = state.q.toLowerCase();
@@ -697,6 +923,8 @@ function vProductos(){
              style="width:56px;background:transparent;border:0;color:var(--acc);font:inherit;font-weight:700;outline:none">
     </label>
   </div>
+
+  ${exploradorHTML()}
 
   ${ps.length? `
   <div class="tablewrap"><table>
@@ -834,14 +1062,16 @@ function vRubros(){
           <div class="rubro-sub">${esc(f.cat)} · <span style="color:${COLOR_TEND[f.tend]}">${FLECHA_TEND[f.tend]} ${f.tend}</span>${mio?` · <b style="color:var(--acc)">${mio.n} tuyo${mio.n===1?"":"s"}</b>`:""}</div>
         </div>
         ${btnFav("rubros",f.n)}
-        <div class="rubro-nums">
-          <div class="rubro-margen"><b style="color:${colorMargen(f.margen)}">${f.margen}%</b><span>margen</span></div>
-          <div class="rubro-op"><b style="color:${cOp}">${op}</b><span>oport.</span></div>
-        </div>
+        <div class="rubro-margen"><b style="color:${colorMargen(f.margen)}">${f.margen}%</b><span>margen</span></div>
       </div>
-      ${medidor(f.margen, colorMargen(f.margen), "Margen bruto típico")}
-      ${medidor(f.explotado,cExp,"Explotado")}
-      ${medidor(f.proyeccion,cPro,"Proyección")}
+      <div class="rubro-op-linea">
+        <div class="op-barra"><i style="width:${op}%;background:${cOp}"></i></div>
+        <b style="color:${cOp}">${op}</b><span>oportunidad</span>
+      </div>
+      <div class="rubro-mini">
+        <span>saturación <b style="color:${cExp}">${f.explotado}</b></span>
+        <span>proyección <b style="color:${cPro}">${f.proyeccion}</b></span>
+      </div>
       <p class="rubro-nota">${esc(f.nota)}</p>
       ${abierto ? panelRubro(f) : `
       <div class="rubro-pie">
@@ -1499,15 +1729,23 @@ function render(){
   if(v==="dashboard"){
     const qh=$("#qHero");
     if(qh){
-      const lanzar=()=>{
+      let debounce;
+      const lanzar=(yaMismo)=>{
         state.qGlobal = qh.value;
         const g=$("#qGlobal"); if(g) g.value = qh.value;
         pintarBusqueda();
-        if(qh.value.trim().length>=2) $("#resGlobal").scrollIntoView({behavior:"smooth",block:"start"});
+        clearTimeout(debounce);
+        const q = qh.value.trim();
+        if(q.length < 2){ const c=$("#ofertas"); if(c){ c.hidden=true; c.innerHTML=""; } return; }
+        /* la búsqueda pega contra catálogos externos: no en cada tecla */
+        debounce = setTimeout(()=>{
+          pintarOfertas(q);
+          $("#ofertas").scrollIntoView({behavior:"smooth",block:"start"});
+        }, yaMismo ? 0 : 550);
       };
-      qh.oninput = lanzar;
-      qh.onkeydown = e=>{ if(e.key==="Enter") lanzar(); };
-      const b=$("#btnHeroBuscar"); if(b) b.onclick = lanzar;
+      qh.oninput = ()=>lanzar(false);
+      qh.onkeydown = e=>{ if(e.key==="Enter") lanzar(true); };
+      const b=$("#btnHeroBuscar"); if(b) b.onclick = ()=>lanzar(true);
     }
     arrancarRota();
   }

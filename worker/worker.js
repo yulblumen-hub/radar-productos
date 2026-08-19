@@ -1,180 +1,236 @@
 /**
- * Proxy a la API de Mercado Libre.
+ * Proxy de catálogos.
  *
- * Existe por dos motivos: la API pide un token OAuth que no puede vivir en una
- * página estática, y el navegador no puede llamarla directo por CORS.
+ * Existe por una sola razón: los proveedores publican su catálogo en abierto,
+ * pero sin cabeceras CORS, así que el navegador no puede leerlo. Este worker
+ * lo lee por HTTP —donde CORS no aplica— y se lo devuelve a la app.
  *
- * El worker guarda el secret, renueva el token solo y cachea las respuestas
- * para no gastar cuota al pedo.
+ * No necesita credenciales de nada. Se despliega y anda.
  *
- * Variables (se cargan con `wrangler secret put`, nunca en el código):
- *   ML_CLIENT_ID      · público, el que da Mercado Libre al crear la app
- *   ML_CLIENT_SECRET  · privado, NO se comparte ni se commitea
- *   ORIGEN_PERMITIDO  · ej: https://yulblumen-hub.github.io
+ * Rutas:
+ *   /catalogo?url=https://proveedor.com     → catálogo normalizado
+ *   /buscar?q=tabla+picada                  → busca en todos los proveedores a la vez
+ *   /health
  */
 
-const ML   = "https://api.mercadolibre.com";
-const SITIO = "MLA";                 // MLA = Argentina
-const CACHE_BUSQUEDA = 60 * 30;      // media hora
-const TOKEN_MARGEN   = 60 * 5;       // renovar 5 min antes de que venza
+const CACHE_CATALOGO = 60 * 60 * 6;   // 6 h: un catálogo mayorista no cambia cada hora
+const TIMEOUT = 9000;
 
-let tokenMem = null;                 // { valor, vence }  (vive lo que vive el isolate)
+/* ---------- utilidades ---------- */
 
-/* ---------------- token ---------------- */
+const UA = "Mozilla/5.0 (compatible; RadarDeProductos/1.0)";
 
-async function obtenerToken(env) {
-  const ahora = Math.floor(Date.now() / 1000);
-  if (tokenMem && tokenMem.vence - TOKEN_MARGEN > ahora) return tokenMem.valor;
-
-  const r = await fetch(`${ML}/oauth/token`, {
-    method: "POST",
-    headers: {
-      "accept": "application/json",
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: env.ML_CLIENT_ID,
-      client_secret: env.ML_CLIENT_SECRET,
-    }),
-  });
-
-  if (!r.ok) {
-    const detalle = await r.text();
-    throw new Error(`No se pudo obtener el token (${r.status}): ${detalle.slice(0, 300)}`);
-  }
-
-  const j = await r.json();
-  tokenMem = { valor: j.access_token, vence: ahora + (j.expires_in || 21600) };
-  return tokenMem.valor;
-}
-
-async function pedirML(env, ruta) {
-  const token = await obtenerToken(env);
-  const r = await fetch(`${ML}${ruta}`, {
-    headers: { authorization: `Bearer ${token}`, accept: "application/json" },
-  });
-  if (r.status === 401) {           // token vencido antes de tiempo: uno más y listo
-    tokenMem = null;
-    const t2 = await obtenerToken(env);
-    return fetch(`${ML}${ruta}`, {
-      headers: { authorization: `Bearer ${t2}`, accept: "application/json" },
+async function traer(url, tipo = "json") {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT);
+  try {
+    const r = await fetch(url, {
+      headers: { "user-agent": UA, accept: "application/json,text/html" },
+      signal: ctrl.signal,
+      cf: { cacheTtl: CACHE_CATALOGO, cacheEverything: true },
     });
+    if (!r.ok) return null;
+    return tipo === "json" ? await r.json() : await r.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
   }
-  return r;
 }
 
-/* ---------------- normalización ---------------- */
+const limpiar = (s) =>
+  String(s || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-z]+;|&#\d+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-const mediana = (xs) => {
-  if (!xs.length) return null;
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+const origen = (u) => {
+  try {
+    return new URL(/^https?:\/\//i.test(u) ? u : "https://" + u).origin;
+  } catch {
+    return null;
+  }
 };
 
-function resumirMercado(j) {
-  const items = Array.isArray(j.results) ? j.results : [];
-  const precios = items.map(i => Number(i.price)).filter(p => p > 0);
+/* ---------- lectores por plataforma ---------- */
 
-  /* sold_quantity no siempre viene: ML lo fue restringiendo.
-     Si no está, lo decimos en vez de inventar un número. */
-  const conVentas = items.filter(i => Number.isFinite(Number(i.sold_quantity)));
-  const hayVentas = conVentas.length > 0;
-
-  const top = (hayVentas
-    ? [...conVentas].sort((a, b) => b.sold_quantity - a.sold_quantity)
-    : items
-  ).slice(0, 5).map(i => ({
-    titulo: i.title,
-    precio: Number(i.price) || null,
-    vendidos: Number.isFinite(Number(i.sold_quantity)) ? Number(i.sold_quantity) : null,
-    link: i.permalink || null,
-    vendedor: (i.seller && (i.seller.nickname || i.seller.id)) || null,
-    envioGratis: !!(i.shipping && i.shipping.free_shipping),
-  }));
-
-  return {
-    publicaciones: (j.paging && j.paging.total) || items.length,
-    muestra: items.length,
-    precioMin: precios.length ? Math.min(...precios) : null,
-    precioMediana: mediana(precios),
-    precioMax: precios.length ? Math.max(...precios) : null,
-    moneda: (items[0] && items[0].currency_id) || "ARS",
-    conEnvioGratis: items.filter(i => i.shipping && i.shipping.free_shipping).length,
-    hayDatoDeVentas: hayVentas,
-    top,
-  };
+/* Shopify: /products.json, abierto y con CORS propio */
+async function leerShopify(base) {
+  const j = await traer(`${base}/products.json?limit=250`);
+  if (!j || !Array.isArray(j.products)) return null;
+  return j.products.map((p) => {
+    const v = (p.variants || [])[0] || {};
+    return {
+      titulo: p.title || "",
+      precio: Number(v.price) || 0,
+      antes: Number(v.compare_at_price) || 0,
+      stock: v.available !== false,
+      img: ((p.images || [])[0] || {}).src || "",
+      link: `${base}/products/${p.handle}`,
+      tipo: p.product_type || "",
+      publicado: (p.published_at || "").slice(0, 10),
+    };
+  });
 }
 
-/* ---------------- CORS ---------------- */
+/* WooCommerce: Store API pública, sin token pero sin CORS */
+async function leerWoo(base) {
+  for (const ruta of ["/wp-json/wc/store/v1/products", "/wp-json/wc/store/products"]) {
+    const j = await traer(`${base}${ruta}?per_page=100`);
+    if (!Array.isArray(j) || !j.length) continue;
+    return j.map((p) => {
+      const pr = p.prices || {};
+      const menor = Number(pr.price) || 0;
+      /* Woo devuelve los precios en la menor unidad: 156410 con 2 decimales = 1564,10 */
+      const div = Math.pow(10, Number(pr.currency_minor_unit ?? 2));
+      return {
+        titulo: limpiar(p.name),
+        precio: menor / div,
+        antes: Number(pr.regular_price) ? Number(pr.regular_price) / div : 0,
+        stock: p.is_in_stock !== false,
+        img: ((p.images || [])[0] || {}).src || "",
+        link: p.permalink || base,
+        tipo: ((p.categories || [])[0] || {}).name || "",
+        publicado: "",
+      };
+    });
+  }
+  return null;
+}
 
-const cors = (env) => ({
-  "access-control-allow-origin": env.ORIGEN_PERMITIDO || "*",
+/* Tienda Nube: no expone API abierta, pero el buscador devuelve HTML legible */
+async function leerTiendaNube(base, q) {
+  if (!q) return null;
+  const html = await traer(`${base}/search/?q=${encodeURIComponent(q)}`, "text");
+  if (!html || !/tiendanube|nuvemshop/i.test(html)) return null;
+  const items = [];
+  const re = /<a[^>]+href="([^"]*\/productos\/[^"]+)"[^>]*>[\s\S]{0,600}?<img[^>]+(?:data-src|src)="([^"]+)"[\s\S]{0,600}?\$\s*([\d.,]+)/gi;
+  let m;
+  while ((m = re.exec(html)) && items.length < 40) {
+    const link = m[1].startsWith("http") ? m[1] : base + m[1];
+    items.push({
+      titulo: limpiar(decodeURIComponent(link.split("/productos/")[1] || "").replace(/-/g, " ")),
+      precio: Number(String(m[3]).replace(/\./g, "").replace(",", ".")) || 0,
+      antes: 0,
+      stock: true,
+      img: m[2].startsWith("//") ? "https:" + m[2] : m[2],
+      link,
+      tipo: "",
+      publicado: "",
+    });
+  }
+  return items.length ? items : null;
+}
+
+async function leerCatalogo(base, q) {
+  return (
+    (await leerShopify(base)) ||
+    (await leerWoo(base)) ||
+    (await leerTiendaNube(base, q)) ||
+    null
+  );
+}
+
+/* ---------- búsqueda ---------- */
+
+/* Puntaje simple y explicable: título que arranca con el término manda,
+   después coincidencia completa, después por palabra suelta. */
+function puntuar(titulo, termino) {
+  const t = titulo.toLowerCase();
+  const q = termino.toLowerCase().trim();
+  if (!q) return 0;
+  if (t === q) return 100;
+  if (t.startsWith(q)) return 90;
+  if (t.includes(q)) return 75;
+  const palabras = q.split(/\s+/).filter((w) => w.length > 2);
+  if (!palabras.length) return 0;
+  const halladas = palabras.filter((w) => t.includes(w)).length;
+  return halladas ? Math.round((halladas / palabras.length) * 60) : 0;
+}
+
+/* ---------- respuesta ---------- */
+
+const cors = () => ({
+  "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,OPTIONS",
   "access-control-allow-headers": "content-type",
-  "vary": "origin",
 });
 
-const json = (data, env, status = 200, cacheSeg = 0) =>
+const json = (data, status = 200, seg = 0) =>
   new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": cacheSeg ? `public, max-age=${cacheSeg}` : "no-store",
-      ...cors(env),
+      "cache-control": seg ? `public, max-age=${seg}` : "no-store",
+      ...cors(),
     },
   });
-
-/* ---------------- rutas ---------------- */
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: cors(env) });
+    if (url.pathname === "/health") return json({ ok: true, version: 2 });
 
-    if (url.pathname === "/health") {
-      return json({ ok: true, configurado: !!(env.ML_CLIENT_ID && env.ML_CLIENT_SECRET) }, env);
-    }
-
-    if (url.pathname === "/buscar") {
-      const q = (url.searchParams.get("q") || "").trim();
-      if (!q) return json({ error: "Falta el parámetro q" }, env, 400);
+    /* Un catálogo suelto */
+    if (url.pathname === "/catalogo") {
+      const base = origen(url.searchParams.get("url") || "");
+      if (!base) return json({ error: "Falta o es inválido el parámetro url" }, 400);
 
       const cache = caches.default;
-      const clave = new Request(url.toString(), request);
-      const cacheado = await cache.match(clave);
-      if (cacheado) return cacheado;
+      const clave = new Request(url.toString());
+      const hit = await cache.match(clave);
+      if (hit) return hit;
 
-      try {
-        const r = await pedirML(env, `/sites/${SITIO}/search?q=${encodeURIComponent(q)}&limit=50`);
-        if (!r.ok) {
-          const detalle = await r.text();
-          return json({ error: `Mercado Libre respondió ${r.status}`, detalle: detalle.slice(0, 300) }, env, 502);
-        }
-        const resumen = resumirMercado(await r.json());
-        const resp = json({ q, ...resumen, actualizado: new Date().toISOString() }, env, 200, CACHE_BUSQUEDA);
-        ctx.waitUntil(cache.put(clave, resp.clone()));
-        return resp;
-      } catch (e) {
-        return json({ error: String(e.message || e) }, env, 500);
-      }
+      const prods = await leerCatalogo(base, url.searchParams.get("q") || "");
+      if (!prods) return json({ base, productos: [], error: "No pude leer el catálogo de este sitio." }, 200, 600);
+
+      const resp = json({ base, productos: prods, total: prods.length }, 200, CACHE_CATALOGO);
+      ctx.waitUntil(cache.put(clave, resp.clone()));
+      return resp;
     }
 
-    if (url.pathname === "/trends") {
-      try {
-        const r = await pedirML(env, `/trends/${SITIO}`);
-        if (!r.ok) {
-          return json({ error: `Mercado Libre respondió ${r.status}`, disponible: false }, env, 502);
-        }
-        const j = await r.json();
-        return json({ disponible: true, tendencias: (j || []).slice(0, 40) }, env, 200, 3600);
-      } catch (e) {
-        return json({ error: String(e.message || e), disponible: false }, env, 500);
-      }
+    /* Búsqueda federada: varios proveedores a la vez */
+    if (url.pathname === "/buscar") {
+      const q = (url.searchParams.get("q") || "").trim();
+      const sitios = (url.searchParams.get("sitios") || "").split(",").map((s) => origen(s)).filter(Boolean);
+      if (!q) return json({ error: "Falta q" }, 400);
+      if (!sitios.length) return json({ error: "Falta sitios" }, 400);
+
+      const cache = caches.default;
+      const clave = new Request(url.toString());
+      const hit = await cache.match(clave);
+      if (hit) return hit;
+
+      const tandas = await Promise.all(
+        sitios.slice(0, 20).map(async (base) => {
+          const prods = await leerCatalogo(base, q);
+          if (!prods) return { base, ok: false, items: [] };
+          const items = prods
+            .map((p) => ({ ...p, base, punta: puntuar(p.titulo, q) }))
+            .filter((p) => p.punta > 0);
+          return { base, ok: true, items, catalogo: prods.length };
+        })
+      );
+
+      const items = tandas.flatMap((t) => t.items).sort((a, b) => b.punta - a.punta || a.precio - b.precio);
+      const resp = json(
+        {
+          q,
+          resultados: items.slice(0, 60),
+          consultados: tandas.length,
+          respondieron: tandas.filter((t) => t.ok).length,
+          fallaron: tandas.filter((t) => !t.ok).map((t) => t.base),
+        },
+        200,
+        3600
+      );
+      ctx.waitUntil(cache.put(clave, resp.clone()));
+      return resp;
     }
 
-    return json({ error: "Ruta desconocida", rutas: ["/health", "/buscar?q=", "/trends"] }, env, 404);
+    return json({ error: "Ruta desconocida", rutas: ["/health", "/catalogo?url=", "/buscar?q=&sitios="] }, 404);
   },
 };

@@ -852,3 +852,106 @@ code{font-family:var(--mono)}
   :root:not([data-theme]) th{border-bottom-width:2px}
   :root:not([data-theme]) .snav.active{background:#dfeae2}
 }
+
+/* ================= ofertas reales ================= */
+.ofertas{margin-bottom:18px}
+.of-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.of-cab h3{font-size:15px}
+.of-cab .btn{margin-left:auto}
+.of-cargando,.of-vacio{
+  background:var(--bg2);border:1px dashed var(--line);border-radius:var(--r);
+  padding:20px;color:var(--tx3);font-size:13.5px;
+}
+.of-vacio b{color:var(--tx);display:block;margin-bottom:5px}
+.ofertas-lista{display:flex;flex-direction:column;gap:7px}
+.oferta{
+  display:flex;align-items:center;gap:13px;padding:10px 13px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);transition:.14s;
+}
+.oferta:hover{border-color:var(--acc)}
+.of-pos{
+  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--tx3);
+  width:18px;text-align:center;flex:none;
+}
+.of-foto{
+  width:56px;height:56px;flex:none;border-radius:9px;overflow:hidden;
+  background:var(--bg3);display:block;border:1px solid var(--line);
+}
+.of-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.of-foto.vacia{background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 6px,var(--bg2) 6px,var(--bg2) 12px)}
+.of-txt{flex:1;min-width:0}
+.of-tit{
+  display:block;font-size:13.5px;font-weight:600;color:var(--tx);
+  text-decoration:none;line-height:1.35;margin-bottom:3px;
+}
+.of-tit:hover{color:var(--acc);text-decoration:underline}
+.of-prov{font-size:11.5px;color:var(--tx3)}
+.of-prov b{color:var(--tx2);font-weight:600}
+.of-sin{color:var(--bad);margin-left:6px}
+.of-precio{text-align:right;flex:none;white-space:nowrap;min-width:88px}
+.of-precio b{display:block;font-family:var(--mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.of-precio .off{font-size:10.5px;color:var(--oro);font-weight:600;font-family:var(--mono)}
+@media(max-width:640px){
+  .oferta{flex-wrap:wrap}
+  .of-txt{flex-basis:calc(100% - 100px)}
+  .of-precio{margin-left:auto}
+  .oferta .btn{width:100%}
+}
+
+/* ================= explorador ================= */
+.explorador{margin-bottom:20px}
+.expl{
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;display:flex;flex-direction:column;gap:9px;transition:.14s;
+}
+.expl:hover{border-color:var(--acc)}
+.expl-cab{display:flex;align-items:flex-start;gap:10px}
+.expl-cab>div{flex:1;min-width:0}
+.expl-cab b{display:block;font-size:14px;line-height:1.3;letter-spacing:-.01em}
+.expl-rubro{font-size:11.5px;color:var(--tx3)}
+.expl-score{font-family:var(--mono);font-size:17px;font-weight:600;flex:none}
+.expl-w{font-size:12.5px;color:var(--tx2);line-height:1.5;margin:0;flex:1}
+.expl-pie{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:9px;border-top:1px solid var(--line)}
+.expl-pie .btn{margin-left:auto}
+
+
+/* ---------- tarjeta de rubro: una sola jerarquía ---------- */
+.rubro{padding:15px 16px 14px}
+.rubro-cab{display:flex;align-items:center;gap:11px;cursor:pointer;margin-bottom:13px}
+.rubro-id{flex:1;min-width:0}
+.rubro-id h3{font-size:14.5px;line-height:1.25;margin-bottom:2px}
+.rubro-meta{font-size:11.5px;color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rubro-meta i{font-style:normal;font-family:var(--mono);font-size:10.5px}
+.rubro-meta i.mios{color:var(--acc)}
+.rubro-margen{flex:none;text-align:right;display:block}
+.rubro-margen b{display:block;font-family:var(--mono);font-size:23px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.rubro-margen span{font-family:var(--mono);font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em}
+
+.rubro-op-linea{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.op-barra{flex:1;height:7px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.op-barra i{display:block;height:100%;border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.rubro-op-linea b{font-family:var(--mono);font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.rubro-op-linea span{font-family:var(--mono);font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
+
+.rubro-sub{display:flex;gap:16px;font-size:11.5px;color:var(--tx3);margin-bottom:10px}
+.rubro-sub b{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;margin-left:3px}
+
+.rubro-nota{font-size:12.5px;color:var(--tx2);line-height:1.5;margin:0 0 12px}
+.rubro-abrir{width:100%}
+
+/* tarjeta de rubro: una barra manda, el resto es apoyo */
+.rubro-op-linea{display:flex;align-items:center;gap:9px;margin:2px 0 9px}
+.op-barra{flex:1;height:7px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.op-barra i{display:block;height:100%;border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.rubro-op-linea b{font-family:var(--mono);font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.rubro-op-linea span{font-family:var(--mono);font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
+.rubro-mini{display:flex;gap:16px;font-size:11.5px;color:var(--tx3);margin-bottom:10px}
+.rubro-mini b{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;margin-left:3px}
+
+/* grupos de ofertas */
+.of-grupo{margin-bottom:18px}
+.of-tit-grupo{
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.05em;
+  color:var(--tx2);margin-bottom:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;
+}
+.of-tit-grupo span{font-weight:500;color:var(--tx3);letter-spacing:0}

@@ -1,71 +1,61 @@
-# radar-ml · proxy de Mercado Libre
+# radar-catalogos · proxy de catálogos
 
-La API de Mercado Libre dejó de ser pública: todo pide token OAuth. Un token no puede
-vivir en una página estática (cualquiera lo lee), y encima el navegador no puede llamar
-a `api.mercadolibre.com` por CORS. Este worker resuelve las dos cosas: guarda el secret,
-renueva el token solo cada 6 horas y le habla a la app por HTTPS con CORS.
+Los proveedores publican su catálogo en abierto, pero **sin cabeceras CORS**, así que
+el navegador no puede leerlo. Este worker lo lee por HTTP —donde CORS no aplica— y se
+lo devuelve a la app.
 
-Corre en el plan gratis de Cloudflare (100.000 pedidos por día). Las búsquedas se cachean
-media hora, así que el gasto real es mínimo.
+**No necesita credenciales de nada.** Se despliega y anda.
 
-## Puesta en marcha
+## Qué resuelve
 
-**1. Crear la aplicación en Mercado Libre** — https://developers.mercadolibre.com.ar/devcenter
+Buscás "tabla para picada" y la app te devuelve las ofertas reales de todos los
+proveedores cargados: foto del producto, precio, si hay stock y el link directo a la
+ficha. Ordenadas por qué tan bien coinciden y por precio. Sin pasar por Google.
 
-- "Crear aplicación"
-- *Redirect URI*: `https://yulblumen-hub.github.io/radar-productos/`
-- Permisos: sólo lectura (`read`)
-- Anotá el **App ID** (ese es el `client_id`) y el **Secret Key**
+Lee tres plataformas:
 
-**2. Desplegar el worker**
+| Plataforma | Cómo | CORS propio |
+|---|---|---|
+| Shopify | `/products.json` | sí (anda sin worker) |
+| WooCommerce | Store API (`/wp-json/wc/store/v1/products`) | no |
+| Tienda Nube | buscador HTML | no |
 
-```bash
-npm install -g wrangler
-wrangler login
-wrangler secret put ML_CLIENT_ID
-wrangler secret put ML_CLIENT_SECRET
-wrangler deploy
-```
+## Desplegarlo (5 minutos, sin cuentas de terceros)
 
-`wrangler secret put` te pide el valor por teclado y lo guarda cifrado en Cloudflare:
-no queda en el repo ni en el historial de la terminal.
+Todo desde el navegador, en **dash.cloudflare.com**:
 
-**3. Enchufarlo a la app**
+1. **Workers & Pages** → **Create** → **Start with Hello World!** → **Get started**
+2. Nombre: `radar-catalogos` → **Deploy**
+3. **Edit code** → borrar todo → pegar el contenido de `worker.js` → **Deploy**
+4. Copiar la URL que te queda: `https://radar-catalogos.TU-USUARIO.workers.dev`
 
-`wrangler deploy` te devuelve una URL tipo `https://radar-ml.TU-USUARIO.workers.dev`.
-Ponela en `data.js`:
+Después pegá esa URL en `data.js`:
 
 ```js
-const API_MERCADO = "https://radar-ml.TU-USUARIO.workers.dev";
+const API_CATALOGO = "https://radar-catalogos.TU-USUARIO.workers.dev";
 ```
 
-Commit, push, y la app empieza a mostrar datos de mercado sola.
+Commit, push, y la búsqueda empieza a traer resultados reales.
 
 ## Probarlo
 
 ```bash
-curl "https://radar-ml.TU-USUARIO.workers.dev/health"
+curl "https://radar-catalogos.TU-USUARIO.workers.dev/health"
 ```
 
 ```bash
-curl "https://radar-ml.TU-USUARIO.workers.dev/buscar?q=comedero+antivoracidad"
+curl "https://radar-catalogos.TU-USUARIO.workers.dev/catalogo?url=https://mau.com.ar"
 ```
+
+## Costo
+
+Plan gratis de Cloudflare: 100.000 pedidos por día. Los catálogos se cachean 6 horas
+y las búsquedas 1 hora, así que el uso real es una fracción de eso.
 
 ## Rutas
 
-| Ruta | Qué devuelve |
+| Ruta | Qué hace |
 |---|---|
-| `/health` | Si el worker está vivo y con credenciales cargadas |
-| `/buscar?q=` | Publicaciones compitiendo, precio mínimo/mediano/máximo, cuántas con envío gratis y las 5 principales |
-| `/trends` | Búsquedas más populares del sitio, si Mercado Libre las expone con este token |
-
-## Lo que todavía no está verificado
-
-El código no se pudo probar contra la API real porque hace falta un token, y el token
-sale de tu cuenta. Dos cosas a confirmar en el primer `curl`:
-
-- **`sold_quantity`** — ML fue restringiendo la cantidad vendida por publicación. Si no
-  viene, la respuesta trae `hayDatoDeVentas: false` y la app lo dice en lugar de inventar
-  un número.
-- **`/trends`** — puede requerir permisos que una app de sólo lectura no tenga. Si no
-  está disponible, devuelve `disponible: false` y la app esconde esa sección.
+| `/health` | Confirma que está vivo |
+| `/catalogo?url=` | Catálogo completo y normalizado de un proveedor |
+| `/buscar?q=&sitios=` | Busca el término en varios proveedores a la vez y ordena por coincidencia y precio |
