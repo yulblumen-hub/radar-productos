@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v36";
+const APP_VER = "v39";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -331,7 +331,10 @@ function confiabilidad(base, sitios){
   };
 }
 
+const VACIAS = new Set(["para","con","sin","del","los","las","por","una","uno","que","muy","mas","más"]);
+
 async function buscarOfertas(q){
+  const qLimpio = q.trim();
   const clave = q.toLowerCase().trim();
   if(clave.length < 2) return null;
   if(ofertasCache.has(clave)) return ofertasCache.get(clave);
@@ -339,6 +342,25 @@ async function buscarOfertas(q){
   const sitios = sitiosDeBusqueda();
   const prom = (async ()=>{
     let items = [], consultados = 0, respondieron = 0, descubiertos = [];
+
+    /* Buscando "masajeador de cuello" no sirve que aparezca un peluche sólo
+       porque dice "cuello". La regla: la primera palabra —la que nombra el
+       producto— tiene que estar sí o sí; las demás son el detalle y alcanza
+       con la mitad. Así "tabla picada" encuentra tablas, pero "masajeador de
+       cuello" no trae peluches. */
+    const relevante = (titulo)=>{
+      const t = (titulo||"").toLowerCase();
+      const q = qLimpio.toLowerCase();
+      if(t.includes(q)) return true;
+      const palabras = q.split(/\s+/).filter(w=>w.length>3 && !VACIAS.has(w));
+      if(!palabras.length) return true;
+      const raiz = palabras[0].replace(/(es|s)$/,"");     /* comedero/comederos */
+      if(!t.includes(raiz)) return false;
+      if(palabras.length === 1) return true;
+      const resto = palabras.slice(1);
+      const hallan = resto.filter(w=>t.includes(w.replace(/(es|s)$/,""))).length;
+      return hallan >= Math.floor(resto.length/2);
+    };
 
     if(hayCatalogo()){
       /* El worker atiende 20 sitios por consulta y son 35, así que va en tandas.
@@ -390,6 +412,8 @@ async function buscarOfertas(q){
       }));
       items = tandas.flat();
     }
+
+    items = items.filter(p=>relevante(p.titulo));
 
     const conf = items.map(p=>{
       const c = confiabilidad(p.base, sitios);
@@ -448,7 +472,11 @@ function ofertaHTML(p, i){
 async function pintarOfertas(q){
   const caja = $("#ofertas"); if(!caja) return;
   caja.hidden = false;
-  caja.innerHTML = `<div class="of-cargando">Buscando “${esc(q)}” en ${sitiosDeBusqueda().length} proveedores…</div>`;
+  caja.innerHTML = `<div class="of-cargando">
+    <span class="of-spin"></span>
+    <div><b>Buscando “${esc(q)}”</b>
+    <span>en ${sitiosDeBusqueda().length} proveedores · puede tardar unos segundos</span></div>
+  </div>`;
   const r = await buscarOfertas(q);
   const sigue = $("#ofertas"); if(!sigue || state.qGlobal.trim()!==q.trim()) return;
 
@@ -472,7 +500,7 @@ async function pintarOfertas(q){
     ${r.proveedores.length ? `
       <div class="of-grupo">
         <div class="of-tit-grupo">🏢 Dónde comprarlo <span>${r.proveedores.length} · ordenado por confiabilidad y precio</span></div>
-        <div class="ofertas-lista">${r.proveedores.slice(0,15).map(ofertaHTML).join("")}</div>
+        <div class="of-grilla">${r.proveedores.slice(0,18).map(ofertaHTML).join("")}</div>
       </div>` : `
       <div class="of-vacio"><b>Ningún proveedor tiene “${esc(q)}”.</b>
       <p class="hintline">${r.conWorker?"Probá con una palabra más general.":"Casi ningún proveedor deja que el navegador lo lea. Con el proxy de catálogos se consultan todos."}</p></div>`}
@@ -480,7 +508,7 @@ async function pintarOfertas(q){
     ${r.competencia.length ? `
       <div class="of-grupo">
         <div class="of-tit-grupo">🎯 A cuánto lo venden <span>${r.competencia.length} · esto no es proveedor, es tu competencia</span></div>
-        <div class="ofertas-lista">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
+        <div class="of-grilla">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
       </div>` : ""}
 
     ${r.descubiertos && r.descubiertos.length ? `
@@ -931,10 +959,14 @@ function vDashboard(){
   const respondidas = cotiz.filter(c=>Number(c.precio)>0).length;
   const arrancaste  = ps.length || misProv.length || prodNicho || totalFav();
 
+  const buscando = (state.qGlobal||"").trim().length >= 2;
+
   return `
+  ${buscando ? `<div id="ofertas" class="ofertas"></div>` : ""}
+
   ${heroHTML()}
 
-  <div id="ofertas" class="ofertas" hidden></div>
+  ${buscando ? "" : `<div id="ofertas" class="ofertas" hidden></div>`}
 
   ${arrancaste ? `<div class="numeros">
     <div><b>${ps.length}</b><span>tus productos</span></div>
@@ -1064,10 +1096,13 @@ function mezclarExplorar(){
   render();
 }
 function buscarEsto(q){
-  state.view="dashboard"; state.qGlobal=q; render();
+  state.view="dashboard";
+  state.qGlobal=q;
+  render();                                   /* con qGlobal cargado el bloque sale arriba */
   const h=$("#qHero"); if(h) h.value=q;
+  const g=$("#qGlobal"); if(g) g.value=q;
+  window.scrollTo({top:0, behavior:"instant"});
   pintarOfertas(q);
-  setTimeout(()=>{ const o=$("#ofertas"); if(o) o.scrollIntoView({behavior:"smooth",block:"start"}); }, 60);
 }
 
 function vProductos(){
@@ -2123,7 +2158,11 @@ function agregarBusqueda(id){
 
 async function buscarParaNicho(id, q){
   const caja = $("#nichoOfertas"); if(!caja) return;
-  caja.innerHTML = `<div class="of-cargando">Buscando “${esc(q)}” en ${sitiosDeBusqueda().length} proveedores…</div>`;
+  caja.innerHTML = `<div class="of-cargando">
+    <span class="of-spin"></span>
+    <div><b>Buscando “${esc(q)}”</b>
+    <span>en ${sitiosDeBusqueda().length} proveedores · puede tardar unos segundos</span></div>
+  </div>`;
   const r = await buscarOfertas(q);
   const sigue = $("#nichoOfertas"); if(!sigue) return;
   const items = r ? r.proveedores : [];

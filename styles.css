@@ -1132,3 +1132,16 @@ code{font-family:var(--mono)}
 .prov-card-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
 .prov-card-pie a{font-size:12px;font-weight:600}
 .mio-tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--oro);letter-spacing:.04em}
+.of-cargando{
+  display:flex;align-items:center;gap:13px;padding:18px 20px;margin-bottom:16px;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);
+}
+.of-cargando b{display:block;font-size:14px}
+.of-cargando span{font-size:12.5px;color:var(--tx3)}
+.of-spin{
+  width:20px;height:20px;flex:none;border-radius:50%;
+  border:2px solid var(--line);border-top-color:var(--acc);
+  animation:girar .7s linear infinite;
+}
+@keyframes girar{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.of-spin{animation-duration:2s}}
