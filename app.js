@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v39";
+const APP_VER = "v40";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -491,25 +491,31 @@ async function pintarOfertas(q){
       </div>`;
     return;
   }
+  const rubroProb = (RUBROS_META.find(r=>q.toLowerCase().includes(r.n.toLowerCase().split(" ")[0])) || {}).n || "";
+  const fuentesAR = rubroProb ? buscadoresDe(rubroProb).filter(b=>b.clase==="nacional") : [];
+
   sigue.innerHTML = `
     <div class="of-cab">
       <h3>“${esc(q)}”</h3>
       <span class="hint">${r.respondieron} de ${r.consultados} fuentes respondieron</span>
+      <button class="btn ghost mini" onclick="cerrarOfertas()">✕ cerrar</button>
     </div>
 
     ${r.proveedores.length ? `
       <div class="of-grupo">
-        <div class="of-tit-grupo">🏢 Dónde comprarlo <span>${r.proveedores.length} · ordenado por confiabilidad y precio</span></div>
+        <div class="of-tit-grupo">🏢 Proveedores <span>${r.proveedores.length} · a estos les comprás</span></div>
         <div class="of-grilla">${r.proveedores.slice(0,18).map(ofertaHTML).join("")}</div>
-      </div>` : `
-      <div class="of-vacio"><b>Ningún proveedor tiene “${esc(q)}”.</b>
-      <p class="hintline">${r.conWorker?"Probá con una palabra más general.":"Casi ningún proveedor deja que el navegador lo lea. Con el proxy de catálogos se consultan todos."}</p></div>`}
-
-    ${r.competencia.length ? `
-      <div class="of-grupo">
-        <div class="of-tit-grupo">🎯 A cuánto lo venden <span>${r.competencia.length} · esto no es proveedor, es tu competencia</span></div>
-        <div class="of-grilla">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
-      </div>` : ""}
+      </div>`
+    : `<div class="of-sinprov">
+        <b>Ningún proveedor de tu lista tiene esto.</b>
+        <p>De ${r.consultados} fuentes consultadas, ninguna lo vende. No quiere decir que no exista: quiere decir que todavía no tenés al proveedor.</p>
+        ${fuentesAR.length?`<div class="of-sinprov-acc">
+          ${fuentesAR.slice(0,4).map(f=>`<a class="btn ghost mini" href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.n)} ↗</a>`).join("")}
+        </div>`:`<div class="of-sinprov-acc">
+          <a class="btn ghost mini" href="https://www.google.com/search?q=${encodeURIComponent("mayorista "+q+" argentina")}" target="_blank" rel="noopener">Buscar mayoristas ↗</a>
+          <a class="btn ghost mini" href="https://listado.mercadolibre.com.ar/${encodeURIComponent(q.replace(/\s+/g,"-"))}-por-mayor" target="_blank" rel="noopener">ML por mayor ↗</a>
+        </div>`}
+      </div>`}
 
     ${r.descubiertos && r.descubiertos.length ? `
       <div class="of-grupo hallados">
@@ -519,23 +525,32 @@ async function pintarOfertas(q){
           const c=d.contacto||{};
           return `<div class="prov-row real">
             <div class="prov-id"><b>${esc(host)}</b>
-              <span class="prov-meta">${d.productos} productos en catálogo · ${d.coincidencias} coinciden con tu búsqueda</span>
-              ${(c.whatsapp||c.tel||c.mail||c.instagram)?`<span class="prov-contacto">
+              <span class="prov-meta">${d.productos} productos · ${d.coincidencias} coinciden</span>
+              ${(c.whatsapp||c.mail||c.instagram)?`<span class="prov-contacto">
                 ${c.whatsapp?`<a href="https://wa.me/${esc(c.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
-                ${c.tel&&!c.whatsapp?`<a href="tel:${esc(c.tel)}">${esc(c.tel)}</a>`:""}
                 ${c.mail?`<a href="mailto:${esc(c.mail)}">${esc(c.mail)}</a>`:""}
                 ${c.instagram?`<a href="https://instagram.com/${esc(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`:""}
-              </span>`:`<span class="prov-contacto sin">sin contacto visible en la portada</span>`}
+              </span>`:""}
             </div>
             <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
-            ${c.whatsapp?`<button class="accbtn" title="Pedirle cotización"
-              onclick='formCotiz(${JSON.stringify({proveedor:host, contacto:"wa:"+(d.contacto||{}).whatsapp}).replace(/'/g,"&#39;")})'>◍</button>`:""}
             <button class="accbtn" title="Sumarlo a mis proveedores"
-              onclick='sumarProveedor(${JSON.stringify({n:"", pais:"Argentina", clase:"Descubierto", url:d.base, rubro:"", whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
+              onclick='sumarProveedor(${JSON.stringify({n:"",pais:"Argentina",clase:"Descubierto",url:d.base,rubro:"",whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
           </div>`;}).join("")}
       </div>` : ""}
 
-    ${!r.conWorker?`<p class="hintline">Sólo se consultaron las fuentes que permiten lectura directa desde el navegador. Para consultarlas a todas, desplegá <code>worker/</code>.</p>`:""}`;
+    ${r.competencia.length ? `
+      <details class="of-comp" ${r.proveedores.length?"":"open"}>
+        <summary>🎯 A cuánto lo vende la competencia <span>${r.competencia.length} tienda${r.competencia.length===1?"":"s"} · no son proveedores</span></summary>
+        <div class="of-grilla">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
+        <p class="hintline">Sirve para saber a cuánto podés venderlo, no para comprar.</p>
+      </details>` : ""}`;
+}
+
+function cerrarOfertas(){
+  state.qGlobal = "";
+  const h=$("#qHero"); if(h) h.value="";
+  const g=$("#qGlobal"); if(g) g.value="";
+  render();
 }
 
 /* ================= FOTOS REALES =================
