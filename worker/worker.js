@@ -177,6 +177,26 @@ async function buscarEnLaRed(q, max = 8) {
   return dominios.slice(0, max);
 }
 
+/* ---------- contacto ----------
+   Si el precio dice "a consultar", lo único que sirve es poder escribirle.
+   Casi todos publican el WhatsApp en la portada: lo sacamos de ahí. */
+async function contactoDe(base) {
+  const html = await traer(base, "text");
+  if (!html) return null;
+  const uno = (re) => { const m = html.match(re); return m ? m[1] : null; };
+  const wa = uno(/(?:wa\.me\/|api\.whatsapp\.com\/send\?phone=)\+?(\d{10,15})/i);
+  const tel = uno(/tel:\+?(\d[\d\s\-]{7,16})/i);
+  const mail = uno(/mailto:([^"?\s<>]+@[^"?\s<>]+)/i);
+  const ig = uno(/instagram\.com\/([A-Za-z0-9_.]{3,30})/i);
+  if (!wa && !tel && !mail && !ig) return null;
+  return {
+    whatsapp: wa || null,
+    tel: tel ? tel.replace(/\s+/g, "") : null,
+    mail: mail || null,
+    instagram: ig && !/^(p|reel|explore|accounts)$/i.test(ig) ? ig : null,
+  };
+}
+
 /* ---------- búsqueda ---------- */
 
 /* Puntaje simple y explicable: título que arranca con el término manda,
@@ -217,7 +237,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
 
-    if (url.pathname === "/health") return json({ ok: true, version: 3, lee: ["Shopify","WooCommerce","TiendaNube"], descubre: true });
+    if (url.pathname === "/health") return json({ ok: true, version: 4, lee: ["Shopify","WooCommerce","TiendaNube"], descubre: true });
 
     /* Un catálogo suelto */
     if (url.pathname === "/catalogo") {
@@ -235,6 +255,13 @@ export default {
       const resp = json({ base, productos: prods, total: prods.length }, 200, CACHE_CATALOGO);
       ctx.waitUntil(cache.put(clave, resp.clone()));
       return resp;
+    }
+
+    if (url.pathname === "/contacto") {
+      const base = origen(url.searchParams.get("url") || "");
+      if (!base) return json({ error: "Falta o es inválido el parámetro url" }, 400);
+      const c = await contactoDe(base);
+      return json({ base, contacto: c }, 200, CACHE_CATALOGO);
     }
 
     /* Búsqueda federada: varios proveedores a la vez */
@@ -275,12 +302,16 @@ export default {
               .map((p) => ({ ...p, base, punta: puntuar(p.titulo, q), nuevo: true }))
               .filter((p) => p.punta > 0);
             if (!suyos.length) return null;
-            return { base, items: suyos, catalogo: prods.length };
+            const contacto = await contactoDe(base);
+            return { base, items: suyos, catalogo: prods.length, contacto };
           })
         );
         probados.filter(Boolean).forEach((r) => {
           items = items.concat(r.items);
-          descubiertos.push({ base: r.base, productos: r.catalogo, coincidencias: r.items.length });
+          descubiertos.push({
+            base: r.base, productos: r.catalogo,
+            coincidencias: r.items.length, contacto: r.contacto,
+          });
         });
       }
 
@@ -301,6 +332,6 @@ export default {
       return resp;
     }
 
-    return json({ error: "Ruta desconocida", rutas: ["/health", "/catalogo?url=", "/buscar?q=&sitios=&descubrir=1"] }, 404);
+    return json({ error: "Ruta desconocida", rutas: ["/health", "/catalogo?url=", "/buscar?q=&sitios=&descubrir=1", "/contacto?url="] }, 404);
   },
 };

@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v27";
+const APP_VER = "v28";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -9,7 +9,7 @@ const FKEY = "radar-favoritos-v1";
 const CKEY = "radar-cotizaciones-v1";
 const MKEY = "radar-sitios-mudos-v1";
 /* Subir esto invalida el cache del worker cuando cambia la lógica de búsqueda. */
-const CACHE_BUST = 3;
+const CACHE_BUST = 4;
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -483,12 +483,22 @@ async function pintarOfertas(q){
         <div class="of-tit-grupo">✨ Proveedores nuevos encontrados en la red <span>no estaban en tu lista</span></div>
         ${r.descubiertos.map(d=>{
           const host=d.base.replace(/^https?:\/\//,"").replace(/^www\./,"");
+          const c=d.contacto||{};
           return `<div class="prov-row real">
             <div class="prov-id"><b>${esc(host)}</b>
-              <span class="prov-meta">${d.productos} productos en catálogo · ${d.coincidencias} coinciden con tu búsqueda</span></div>
+              <span class="prov-meta">${d.productos} productos en catálogo · ${d.coincidencias} coinciden con tu búsqueda</span>
+              ${(c.whatsapp||c.tel||c.mail||c.instagram)?`<span class="prov-contacto">
+                ${c.whatsapp?`<a href="https://wa.me/${esc(c.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
+                ${c.tel&&!c.whatsapp?`<a href="tel:${esc(c.tel)}">${esc(c.tel)}</a>`:""}
+                ${c.mail?`<a href="mailto:${esc(c.mail)}">${esc(c.mail)}</a>`:""}
+                ${c.instagram?`<a href="https://instagram.com/${esc(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`:""}
+              </span>`:`<span class="prov-contacto sin">sin contacto visible en la portada</span>`}
+            </div>
             <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
+            ${c.whatsapp?`<button class="accbtn" title="Pedirle cotización"
+              onclick='formCotiz(${JSON.stringify({proveedor:host, contacto:"wa:"+(d.contacto||{}).whatsapp}).replace(/'/g,"&#39;")})'>◍</button>`:""}
             <button class="accbtn" title="Sumarlo a mis proveedores"
-              onclick='sumarProveedor(${JSON.stringify({n:"", pais:"Argentina", clase:"Descubierto", url:d.base, rubro:""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
+              onclick='sumarProveedor(${JSON.stringify({n:"", pais:"Argentina", clase:"Descubierto", url:d.base, rubro:"", whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
           </div>`;}).join("")}
       </div>` : ""}
 
