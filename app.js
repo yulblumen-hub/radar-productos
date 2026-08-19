@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v34";
+const APP_VER = "v36";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -1199,10 +1199,6 @@ function vRubros(){
   });
   base = ordenarRubros(base, state.rubroOrden||"margen");
 
-  const medidor=(v,color,etq)=>`
-    <div class="med"><div class="med-top"><span>${etq}</span><b style="color:${color}">${v}</b></div>
-    <div class="med-track"><i style="width:${v}%;background:${color}"></i></div></div>`;
-
   return `
   <div class="section-h">
     <h2>Rubros</h2>
@@ -1439,6 +1435,37 @@ function vProveedores(){
       </div>`).join("")}</div>
     <p class="hintline" style="margin-top:10px">Para buscar en una: andá a <b>Rubros</b>, abrí el rubro y usá los links — llevan el término correcto en chino.</p>
   </div>`;
+}
+
+/* Barra con etiqueta y valor. Vivía adentro de vRubros, así que la ficha de
+   producto no la veía. */
+const medidor = (v,color,etq)=>`
+  <div class="med"><div class="med-top"><span>${etq}</span><b style="color:${color}">${v}</b></div>
+  <div class="med-track"><i style="width:${v}%;background:${color}"></i></div></div>`;
+
+/* Un tono por macro-categoría, para que las burbujas del mapa se distingan. */
+const COLOR_MACRO = {};
+MACROS.forEach(c=>COLOR_MACRO[c]=tono(c));
+
+function empaquetar(items, ancho, alto){
+  const GAP=4, puestos=[];
+  const cx=ancho/2, cy=alto/2;
+  items.forEach((it,idx)=>{
+    const r=it.r;
+    if(idx===0){ puestos.push({...it,x:cx,y:cy}); return; }
+    let ang=0, rad=r+items[0].r+GAP, x=cx, y=cy, chocado=true, iter=0;
+    while(chocado && iter<20000){
+      x = cx + Math.cos(ang)*rad;
+      y = cy + Math.sin(ang)*rad;
+      chocado = x-r<GAP || x+r>ancho-GAP || y-r<GAP || y+r>alto-GAP
+             || puestos.some(p=>Math.hypot(p.x-x, p.y-y) < p.r + r + GAP);
+      ang += Math.max(0.02, 5/rad);
+      if(ang >= Math.PI*2){ ang=0; rad+=5; }
+      iter++;
+    }
+    if(!chocado) puestos.push({...it,x,y});
+  });
+  return puestos;
 }
 
 function vNichos(){
@@ -1850,6 +1877,7 @@ function vProducto(){
         ${p.url?`<a class="btn ghost" href="${esc(p.url)}" target="_blank" rel="noopener">Ver el producto ↗</a>`:""}
         ${p.provUrl?`<a class="btn ghost" href="${esc(p.provUrl)}" target="_blank" rel="noopener">Proveedor ↗</a>`:""}
         ${p.whatsapp?`<a class="btn ghost" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
+        <button class="btn ghost" onclick="llevarANicho('${p.id}')">◈ Llevar a un nicho</button>
         <button class="btn ghost" onclick='formCotiz(${JSON.stringify({proveedor:p.proveedor||"", producto:p.nombre, rubro:p.rubro}).replace(/'/g,"&#39;")})'>Pedir cotización</button>
       </div>
     </div>
@@ -1985,6 +2013,7 @@ function detalleNicho(n){
   <div class="chips" style="margin-bottom:8px">
     ${(n.busquedas||[]).map(b=>`<span class="chip" onclick="buscarParaNicho('${n.id}','${esc(b).replace(/'/g,"\\'")}')">${esc(b)}</span>`).join("")}
     <span class="chip" onclick="agregarBusqueda('${n.id}')">+ otra búsqueda</span>
+    <span class="chip" onclick="traerDeMisProductos('${n.id}')">◧ traer de mis productos</span>
   </div>
   <div id="nichoOfertas"></div>
 
@@ -2011,6 +2040,51 @@ function detalleNicho(n){
     <button class="btn ghost mini" onclick="editarNicho('${n.id}')">Editar concepto</button>
     <button class="btn danger ghost mini" onclick="borrarNicho('${n.id}')">Eliminar nicho</button>
   </div>`;
+}
+
+/* Puente entre las dos listas: un producto del radar se lleva a un nicho, y
+   desde el nicho se pueden traer los que ya tenés cargados. */
+function elegirNicho(titulo){
+  if(!misNichos.length){
+    if(!confirm("Todavía no tenés nichos. ¿Creás uno ahora?")) return null;
+    crearNicho();
+    return misNichos[0] || null;
+  }
+  if(misNichos.length === 1) return misNichos[0];
+  const lista = misNichos.map((n,i)=>`${i+1}. ${n.emoji||"◈"} ${n.nombre}`).join("\n");
+  const r = prompt(`${titulo}\n\n${lista}\n\nEscribí el número:`);
+  if(!r) return null;
+  return misNichos[Number(r)-1] || null;
+}
+
+function llevarANicho(prodId){
+  const p = state.productos.find(x=>x.id===prodId);
+  if(!p) return;
+  const n = elegirNicho(`¿A qué nicho llevás "${p.nombre}"?`);
+  if(!n) return;
+  (n.productos ||= []);
+  if(n.productos.some(x=>x.titulo===p.nombre)){ toast("Ya estaba en ese nicho"); return; }
+  n.productos.push({
+    titulo: p.nombre, precio: Number(p.venta)||0, img: p.img||"",
+    link: p.url||p.provUrl||"", prov: p.proveedor||"", deProducto: p.id
+  });
+  save(); render(); toast(`Sumado a ${n.nombre}`);
+}
+
+function traerDeMisProductos(nichoId){
+  const n = nichoPorId(nichoId); if(!n) return;
+  const libres = state.productos.filter(p=>!(n.productos||[]).some(x=>x.titulo===p.nombre));
+  if(!libres.length){ toast("No te quedan productos para sumar"); return; }
+  const lista = libres.map((p,i)=>`${i+1}. ${p.nombre}`).join("\n");
+  const r = prompt(`¿Cuál sumás a "${n.nombre}"?\n\n${lista}\n\nEscribí el número:`);
+  if(!r) return;
+  const p = libres[Number(r)-1];
+  if(!p) return;
+  (n.productos ||= []).push({
+    titulo: p.nombre, precio: Number(p.venta)||0, img: p.img||"",
+    link: p.url||p.provUrl||"", prov: p.proveedor||"", deProducto: p.id
+  });
+  save(); render(); toast(`Sumado a ${n.nombre}`);
 }
 
 function abrirMiNicho(id){ state.nichoAbierto = id; render(); }
