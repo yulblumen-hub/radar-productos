@@ -337,7 +337,7 @@ const DOMINIOS = [
    proveedores.com no lo era. `rubros` usa las macro-categorías, así que un proveedor de bazar
    aparece en los ~15 rubros de Hogar sin tener que listarlos uno por uno.
    Subir DIR_VER cuando se agreguen: los usuarios lo reciben sin perder los suyos. */
-const DIR_VER = 2;
+const DIR_VER = 3;
 
 const DIRECTORIO = [
   /* ---- Hogar, bazar y limpieza ---- */
@@ -406,6 +406,33 @@ const DIRECTORIO = [
     tipo:"Distribuidor", zona:"Argentina", nota:"Distribuidor oficial de marcas de accesorios deportivos." },
   { n:"Luna Accesorios", url:"https://lunaccesorios.com.ar/", rubros:["Mascotas","Eventos"],
     tipo:"Fabricante", zona:"Argentina", nota:"Fábrica de accesorios para mascotas. También insumos para sublimar." },
+
+
+  /* ---- Tienda Nube: catálogo legible vía JSON-LD (verificados 19/08/2026) ---- */
+  { n:"Kosméticos", url:"https://kosmeticos.com.ar", rubros:["Belleza"],
+    tipo:"Distribuidor", zona:"Argentina",
+    nota:"Skincare coreano por mayor. Catálogo con precios a la vista." },
+  { n:"SD Mayoristas", url:"https://sdmayoristas.com.ar", rubros:["Belleza"],
+    tipo:"Distribuidor", zona:"Argentina", whatsapp:"11 6598-4888",
+    nota:"Cosmética y cuidado personal por mayor." },
+  { n:"Estetic Make Up", url:"https://esteticmakeup.com", rubros:["Belleza","Moda"],
+    tipo:"Distribuidor", zona:"Tucumán", whatsapp:"381 558-4946",
+    nota:"Maquillaje, perfumería y marroquinería. 1000+ productos con precio." },
+  { n:"Mayorista Jossefina", url:"https://www.mayoristajossefina.com.ar", rubros:["Belleza","Moda"],
+    tipo:"Distribuidor", zona:"Santa Fe", whatsapp:"342 436-5241",
+    nota:"Maquillaje y accesorios por mayor." },
+  { n:"Necy Mayorista", url:"https://www.necy.com.ar", rubros:["Moda","Viaje","Hogar","Niños"],
+    tipo:"Distribuidor", zona:"Córdoba", whatsapp:"351 371-8710",
+    nota:"Marroquinería, valijas, blanquería y artículos infantiles." },
+  { n:"Tu A Tienda Mayorista", url:"https://tuatiendamayoristas.com.ar", rubros:["Outdoor","Hogar","Niños"],
+    tipo:"Distribuidor", zona:"Santa Fe", whatsapp:"346 540-8236",
+    nota:"Polirrubro: pesca, camping, bazar y juguetería." },
+  { n:"PescaMás", url:"https://www.tiendapescamas.com.ar", rubros:["Outdoor"],
+    tipo:"Distribuidor", zona:"Chaco", whatsapp:"362 414-2422",
+    nota:"Artículos de pesca por mayor y menor." },
+  { n:"Enchúlate", url:"https://enchulate.com.ar", rubros:["Moda","Viaje","Belleza"],
+    tipo:"Distribuidor", zona:"Argentina", whatsapp:"11 6654-0378",
+    nota:"Marroquinería, accesorios de moda y cosmética." },
 
   /* ---- Buscadores de proveedores (directorios) ---- */
   { n:"El Ferretero", url:"https://elferretero.com.ar/", rubros:["Herramientas"],

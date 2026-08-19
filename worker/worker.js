@@ -75,9 +75,10 @@ async function leerShopify(base) {
 }
 
 /* WooCommerce: Store API pública, sin token pero sin CORS */
-async function leerWoo(base) {
+async function leerWoo(base, q) {
+  const filtro = q ? `&search=${encodeURIComponent(q)}` : "";
   for (const ruta of ["/wp-json/wc/store/v1/products", "/wp-json/wc/store/products"]) {
-    const j = await traer(`${base}${ruta}?per_page=100`);
+    const j = await traer(`${base}${ruta}?per_page=100${filtro}`);
     if (!Array.isArray(j) || !j.length) continue;
     return j.map((p) => {
       const pr = p.prices || {};
@@ -99,34 +100,50 @@ async function leerWoo(base) {
   return null;
 }
 
-/* Tienda Nube: no expone API abierta, pero el buscador devuelve HTML legible */
-async function leerTiendaNube(base, q) {
-  if (!q) return null;
-  const html = await traer(`${base}/search/?q=${encodeURIComponent(q)}`, "text");
-  if (!html || !/tiendanube|nuvemshop/i.test(html)) return null;
+/* Tienda Nube: no expone API, pero cada producto viene como JSON-LD dentro
+   del HTML. Es la misma data que le da a Google, así que es confiable. */
+function leerJsonLd(html, base) {
+  const bloques = html.match(/<script[^>]+application\/ld\+json[^>]*>[\s\S]*?<\/script>/gi) || [];
   const items = [];
-  const re = /<a[^>]+href="([^"]*\/productos\/[^"]+)"[^>]*>[\s\S]{0,600}?<img[^>]+(?:data-src|src)="([^"]+)"[\s\S]{0,600}?\$\s*([\d.,]+)/gi;
-  let m;
-  while ((m = re.exec(html)) && items.length < 40) {
-    const link = m[1].startsWith("http") ? m[1] : base + m[1];
-    items.push({
-      titulo: limpiar(decodeURIComponent(link.split("/productos/")[1] || "").replace(/-/g, " ")),
-      precio: Number(String(m[3]).replace(/\./g, "").replace(",", ".")) || 0,
-      antes: 0,
-      stock: true,
-      img: m[2].startsWith("//") ? "https:" + m[2] : m[2],
-      link,
-      tipo: "",
-      publicado: "",
-    });
+  for (const b of bloques) {
+    const cuerpo = b.replace(/^[\s\S]*?>/, "").replace(/<\/script>$/i, "");
+    let d;
+    try { d = JSON.parse(cuerpo); } catch { continue; }
+    for (const p of (Array.isArray(d) ? d : [d])) {
+      if (!p || p["@type"] !== "Product") continue;
+      const of = Array.isArray(p.offers) ? p.offers[0] : p.offers || {};
+      const link = of.url || (p.mainEntityOfPage || {})["@id"] || base;
+      items.push({
+        titulo: limpiar(p.name),
+        precio: Number(of.price) || 0,
+        antes: 0,
+        stock: !of.availability || /InStock/i.test(of.availability),
+        img: typeof p.image === "string" ? p.image : (p.image || [])[0] || "",
+        link,
+        tipo: ((p.brand || {}).name) || "",
+        publicado: "",
+      });
+    }
   }
-  return items.length ? items : null;
+  return items;
+}
+
+async function leerTiendaNube(base, q) {
+  /* Con término busca; sin término trae el listado general. */
+  const rutas = q ? [`/search/?q=${encodeURIComponent(q)}`, "/productos/"] : ["/productos/"];
+  for (const ruta of rutas) {
+    const html = await traer(base + ruta, "text");
+    if (!html) continue;
+    const items = leerJsonLd(html, base);
+    if (items.length) return items;
+  }
+  return null;
 }
 
 async function leerCatalogo(base, q) {
   return (
     (await leerShopify(base)) ||
-    (await leerWoo(base)) ||
+    (await leerWoo(base, q)) ||
     (await leerTiendaNube(base, q)) ||
     null
   );
