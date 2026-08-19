@@ -1,12 +1,13 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v31";
+const APP_VER = "v32";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
 const FKEY = "radar-favoritos-v1";
 const CKEY = "radar-cotizaciones-v1";
+const NKEY = "radar-mis-nichos-v1";
 const MKEY = "radar-sitios-mudos-v1";
 /* Subir esto invalida el cache del worker cuando cambia la lógica de búsqueda. */
 const CACHE_BUST = 4;
@@ -27,11 +28,12 @@ let seedVer   = 0;
 let misProv   = [];   // proveedores propios, con tu calificación
 let favoritos = { productos:[], rubros:[], proveedores:[] };
 let cotiz     = [];   // pedidos de cotización
+let misNichos = [];   // nichos propios: conceptos que cruzan rubros
 let comentarios = {};
 let soloLectura = false;
 let yo = "";
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", temp:"mias", sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", temp:"mias", nichoAbierto:null, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -50,6 +52,8 @@ function load(){
     if(ff) favoritos = {...favoritos, ...JSON.parse(ff)};
     const cc = localStorage.getItem(CKEY);
     if(cc) cotiz = JSON.parse(cc) || [];
+    const nn = localStorage.getItem(NKEY);
+    misNichos = nn ? (JSON.parse(nn)||[]) : MIS_NICHOS_SEED.map(n=>({...n, productos:[]}));
     const tt = localStorage.getItem(TKEY);
     state.tiendas = tt ? (JSON.parse(tt)||[]) : TIENDAS_SEED.map(t=>({...t}));
   }catch(e){ state.tiendas = TIENDAS_SEED.map(t=>({...t})); }
@@ -142,6 +146,7 @@ function save(){
     localStorage.setItem(TKEY, JSON.stringify(state.tiendas));
     localStorage.setItem(FKEY, JSON.stringify(favoritos));
     localStorage.setItem(CKEY, JSON.stringify(cotiz));
+    localStorage.setItem(NKEY, JSON.stringify(misNichos));
     localStorage.setItem(SKEY, JSON.stringify({...settings, seedVer}));
   }catch(e){ toast("No se pudo guardar (almacenamiento lleno)"); }
 }
@@ -420,25 +425,24 @@ function puntaje(titulo, termino){
 function ofertaHTML(p, i){
   const off = p.antes>p.precio ? Math.round((1-p.precio/p.antes)*100) : 0;
   return `
-  <div class="oferta">
-    <span class="of-pos">${i+1}</span>
-    <a class="of-foto" href="${esc(p.link)}" target="_blank" rel="noopener">
+  <a class="oferta" href="${esc(p.link)}" target="_blank" rel="noopener">
+    <span class="of-foto${p.img?"":" vacia"}">
       ${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy" onerror="this.closest('.of-foto').classList.add('vacia');this.remove()">`:""}
-    </a>
-    <div class="of-txt">
-      <a class="of-tit" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.titulo.slice(0,72))}</a>
-      <div class="of-prov">
-        <b>${esc(p.prov)}</b>${p.provTipo&&!p.competencia?` · ${esc(p.provTipo)}`:""}
-        ${p.nuevo?`<span class="of-nuevo">encontrado en la red</span>`:""}
+      ${off?`<span class="of-off">${off}% off</span>`:""}
+    </span>
+    <span class="of-cuerpo">
+      <span class="of-tit">${esc(p.titulo.slice(0,72))}</span>
+      <span class="of-prov">
+        <b>${esc(p.prov)}</b>
+        ${p.nuevo?`<span class="of-nuevo">de la red</span>`:""}
         ${p.stock===false?`<span class="of-sin">sin stock</span>`:""}
-      </div>
-    </div>
-    <div class="of-precio">
-      <b>${p.precio?pesos(p.precio):`<span class="of-consultar">precio a pedido</span>`}</b>
-      ${off?`<span class="off">${off}% off</span>`:""}
-    </div>
-    <a class="btn primary mini" href="${esc(p.link)}" target="_blank" rel="noopener">Ver ↗</a>
-  </div>`;
+      </span>
+      <span class="of-precio">
+        <b>${p.precio?pesos(p.precio):`<span class="of-consultar">a consultar</span>`}</b>
+        ${p.antes&&p.antes>p.precio?`<s>${pesos(p.antes)}</s>`:""}
+      </span>
+    </span>
+  </a>`;
 }
 
 async function pintarOfertas(q){
@@ -1852,6 +1856,197 @@ function cerrarBusqueda(){
   pintarBusqueda();
 }
 
+/* ================= MIS NICHOS ================= */
+/* Un nicho propio cruza rubros: lo que lo define es el concepto, no la
+   categoría. Por eso guarda sus propias búsquedas, que son las que después
+   alimentan las recomendaciones. */
+
+function nichoPorId(id){ return misNichos.find(n=>n.id===id); }
+
+function vMisNichos(){
+  const abierto = state.nichoAbierto ? nichoPorId(state.nichoAbierto) : null;
+  if(abierto) return detalleNicho(abierto);
+
+  return `
+  <div class="section-h"><h2>Mis nichos</h2>
+    <span class="hint">tus conceptos, no categorías: lo que une los productos es la idea</span></div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="btnNuevoNicho">+ Crear un nicho</button>
+  </div>
+
+  ${misNichos.length ? `<div class="cardgrid">${misNichos.map(n=>{
+    const prods = n.productos||[];
+    const conPrecio = prods.filter(p=>p.precio);
+    const prom = conPrecio.length ? Math.round(conPrecio.reduce((s,p)=>s+p.precio,0)/conPrecio.length) : 0;
+    return `<div class="nicho-card" onclick="abrirMiNicho('${n.id}')">
+      <div class="nicho-cab">
+        <span class="nicho-emoji">${esc(n.emoji||"◈")}</span>
+        <div>
+          <h3>${esc(n.nombre)}</h3>
+          <div class="meta">${(n.rubros||[]).join(" · ")||"sin rubros"}</div>
+        </div>
+      </div>
+      <p class="nicho-concepto">${esc(n.concepto||"")}</p>
+      <div class="nicho-tiras">
+        ${prods.slice(0,4).map(p=>`<span class="nicho-mini">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:"◻"}</span>`).join("")}
+        ${prods.length>4?`<span class="nicho-mini mas">+${prods.length-4}</span>`:""}
+        ${!prods.length?`<span class="hintline">Todavía sin productos</span>`:""}
+      </div>
+      <div class="nicho-pie">
+        <span>${prods.length} producto${prods.length===1?"":"s"}</span>
+        ${prom?`<span>ticket promedio <b>${pesos(prom)}</b></span>`:""}
+      </div>
+    </div>`;}).join("")}</div>`
+  : `<div class="empty"><div class="big">◈</div>
+      Todavía no armaste ninguno.<br>
+      <span class="hintline">Un nicho propio es un concepto: «Hogar con mensajes», «Perro en el auto». Lo que lo define no es el rubro sino la idea.</span></div>`}`;
+}
+
+function detalleNicho(n){
+  const prods = n.productos||[];
+  const conPrecio = prods.filter(p=>p.precio);
+  const prom = conPrecio.length ? Math.round(conPrecio.reduce((s,p)=>s+p.precio,0)/conPrecio.length) : 0;
+  const margenes = (n.rubros||[]).map(r=>{
+    const m = RUBROS_META.find(x=>x.cat===r);
+    return m ? m.margen : null;
+  }).filter(Boolean);
+  const margenProm = margenes.length ? Math.round(margenes.reduce((a,b)=>a+b,0)/margenes.length) : null;
+
+  return `
+  <button class="btn ghost mini" onclick="abrirMiNicho(null)">← Mis nichos</button>
+
+  <div class="nicho-hero">
+    <span class="nicho-emoji grande">${esc(n.emoji||"◈")}</span>
+    <div>
+      <h2>${esc(n.nombre)}</h2>
+      <p class="nicho-concepto">${esc(n.concepto||"")}</p>
+      ${n.publico?`<p class="nicho-publico"><b>Le vendés a:</b> ${esc(n.publico)}</p>`:""}
+    </div>
+    <div class="nicho-nums">
+      <div><b>${prods.length}</b><span>productos</span></div>
+      ${prom?`<div><b>${pesos(prom)}</b><span>ticket prom.</span></div>`:""}
+      ${margenProm?`<div><b style="color:${colorMargen(margenProm)}">${margenProm}%</b><span>margen típico</span></div>`:""}
+    </div>
+  </div>
+
+  <div class="section-h"><h2>Buscar para este nicho</h2>
+    <span class="hint">tocá una y te trae proveedores reales; el + suma el producto al nicho</span></div>
+  <div class="chips" style="margin-bottom:8px">
+    ${(n.busquedas||[]).map(b=>`<span class="chip" onclick="buscarParaNicho('${n.id}','${esc(b).replace(/'/g,"\\'")}')">${esc(b)}</span>`).join("")}
+    <span class="chip" onclick="agregarBusqueda('${n.id}')">+ otra búsqueda</span>
+  </div>
+  <div id="nichoOfertas"></div>
+
+  ${prods.length?`
+    <div class="section-h" style="margin-top:22px"><h2>Productos del nicho</h2>
+      <span class="hint">los que fuiste guardando</span></div>
+    <div class="of-grilla">${prods.map((p,i)=>`
+      <div class="oferta">
+        <span class="of-foto${p.img?"":" vacia"}">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:""}</span>
+        <span class="of-cuerpo">
+          <span class="of-tit">${esc((p.titulo||"").slice(0,64))}</span>
+          <span class="of-prov"><b>${esc(p.prov||"")}</b></span>
+          <span class="of-precio">
+            <b>${p.precio?pesos(p.precio):`<span class="of-consultar">a consultar</span>`}</b>
+          </span>
+          <span class="nicho-acc">
+            ${p.link?`<a class="btn ghost mini" href="${esc(p.link)}" target="_blank" rel="noopener">Ver ↗</a>`:""}
+            <button class="accbtn del" onclick="quitarDeNicho('${n.id}',${i})">${ICO.tacho}</button>
+          </span>
+        </span>
+      </div>`).join("")}</div>`:""}
+
+  <div class="rubro-pie" style="margin-top:20px">
+    <button class="btn ghost mini" onclick="editarNicho('${n.id}')">Editar concepto</button>
+    <button class="btn danger ghost mini" onclick="borrarNicho('${n.id}')">Eliminar nicho</button>
+  </div>`;
+}
+
+function abrirMiNicho(id){ state.nichoAbierto = id; render(); }
+
+function crearNicho(){
+  const nombre = prompt("Nombre del nicho:\n\nEjemplos: «Hogar con mensajes», «Perro en el auto», «Mate de regalo»");
+  if(!nombre || !nombre.trim()) return;
+  const concepto = prompt("¿Cuál es el concepto? ¿Qué une a estos productos?") || "";
+  const emoji = prompt("Un emoji que lo represente:") || "◈";
+  misNichos.unshift({ id:uid(), nombre:nombre.trim(), emoji:emoji.trim().slice(0,2),
+                      concepto, publico:"", rubros:[], busquedas:[], productos:[] });
+  save(); render(); toast("Nicho creado");
+}
+function editarNicho(id){
+  const n = nichoPorId(id); if(!n) return;
+  const nombre = prompt("Nombre:", n.nombre); if(nombre===null) return;
+  n.nombre = nombre.trim() || n.nombre;
+  n.concepto = prompt("Concepto:", n.concepto||"") ?? n.concepto;
+  n.publico  = prompt("¿A quién le vendés?", n.publico||"") ?? n.publico;
+  save(); render();
+}
+function borrarNicho(id){
+  const n = nichoPorId(id); if(!n) return;
+  if(!confirm(`¿Eliminar el nicho "${n.nombre}"? Se pierden sus ${(n.productos||[]).length} productos guardados.`)) return;
+  misNichos = misNichos.filter(x=>x.id!==id);
+  state.nichoAbierto = null; save(); render(); toast("Nicho eliminado");
+}
+function agregarBusqueda(id){
+  const n = nichoPorId(id); if(!n) return;
+  const q = prompt("¿Qué producto buscás para este nicho?");
+  if(!q || !q.trim()) return;
+  (n.busquedas ||= []).push(q.trim());
+  save(); render();
+  buscarParaNicho(id, q.trim());
+}
+
+async function buscarParaNicho(id, q){
+  const caja = $("#nichoOfertas"); if(!caja) return;
+  caja.innerHTML = `<div class="of-cargando">Buscando “${esc(q)}” en ${sitiosDeBusqueda().length} proveedores…</div>`;
+  const r = await buscarOfertas(q);
+  const sigue = $("#nichoOfertas"); if(!sigue) return;
+  const items = r ? r.proveedores : [];
+  if(!items.length){
+    sigue.innerHTML = `<div class="of-vacio"><b>Sin resultados para “${esc(q)}”.</b>
+      <p class="hintline">Probá con una palabra más general.</p></div>`;
+    return;
+  }
+  sigue.innerHTML = `
+    <div class="of-grupo">
+      <div class="of-tit-grupo">🔎 “${esc(q)}” <span>${items.length} opciones · el + lo guarda en el nicho</span></div>
+      <div class="of-grilla">${items.map((p,i)=>`
+        <div class="oferta">
+          <a class="of-foto${p.img?"":" vacia"}" href="${esc(p.link)}" target="_blank" rel="noopener">
+            ${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:""}
+          </a>
+          <span class="of-cuerpo">
+            <span class="of-tit">${esc((p.titulo||"").slice(0,64))}</span>
+            <span class="of-prov"><b>${esc(p.prov)}</b>${p.nuevo?`<span class="of-nuevo">de la red</span>`:""}</span>
+            <span class="of-precio">
+              <b>${p.precio?pesos(p.precio):`<span class="of-consultar">a consultar</span>`}</b>
+            </span>
+            <span class="nicho-acc">
+              <a class="btn ghost mini" href="${esc(p.link)}" target="_blank" rel="noopener">Ver ↗</a>
+              <button class="accbtn" title="Sumarlo al nicho"
+                onclick='sumarANicho("${id}", ${JSON.stringify({titulo:p.titulo,precio:p.precio,img:p.img,link:p.link,prov:p.prov}).replace(/'/g,"&#39;")})'>+</button>
+            </span>
+          </span>
+        </div>`).join("")}</div>
+    </div>`;
+}
+
+function sumarANicho(id, p){
+  const n = nichoPorId(id); if(!n) return;
+  (n.productos ||= []);
+  if(n.productos.some(x=>x.link===p.link)){ toast("Ya estaba en el nicho"); return; }
+  n.productos.push(p);
+  save(); toast(`Sumado a ${n.nombre}`);
+  const cont = $("#nichoOfertas") ? $("#nichoOfertas").innerHTML : null;
+  render();
+  if(cont && $("#nichoOfertas")) $("#nichoOfertas").innerHTML = cont;
+}
+function quitarDeNicho(id, i){
+  const n = nichoPorId(id); if(!n) return;
+  n.productos.splice(i,1); save(); render();
+}
+
 /* ================= RENDER ================= */
 function render(){
   instalarHandlersEstrellas();
@@ -1872,6 +2067,7 @@ function render(){
     : v==="productos"   ? vProductos()
     : v==="rubros"      ? vRubros()
     : v==="cotizaciones"? vCotizaciones()
+    : v==="misnichos"   ? vMisNichos()
     : v==="favoritos"   ? vFavoritos()
     : v==="tiendas"     ? vTiendas()
     : v==="proveedores" ? vProveedores()
@@ -1921,6 +2117,9 @@ function render(){
     }
     arrancarRota();
     completarFotos();
+  }
+  if(v==="misnichos"){
+    const b=$("#btnNuevoNicho"); if(b) b.onclick = crearNicho;
   }
   if(v==="cotizaciones"){
     const q=$("#qCot");

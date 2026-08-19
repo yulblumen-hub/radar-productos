@@ -464,6 +464,26 @@ const provsDeRubro = rubroNombre => {
   return DIRECTORIO.filter(p => p.rubros.includes(cat));
 };
 
+/* ---------- Mis nichos: ejemplos de arranque ----------
+   Un nicho propio no es un rubro: es un concepto que cruza rubros. "Hogar con
+   mensajes" toma un frenador de puerta, un felpudo y un cuadrito, que viven en
+   categorías distintas, y los une por lo que le dicen al que entra a la casa.
+   Ahí está la marca: en el concepto, no en el producto. */
+const MIS_NICHOS_SEED = [
+  { id:"n1", nombre:"Hogar con mensajes", emoji:"🏠",
+    concepto:"Objetos de casa que dicen algo. El producto es común; lo que se vende es la frase.",
+    publico:"Mujeres 25-45 que decoran, y todo el que busca regalo de casa nueva.",
+    rubros:["Hogar","Eventos"],
+    busquedas:["frenador de puerta","felpudo","cuadro frase","almohadón frase","cartel madera"],
+    productos:[] },
+  { id:"n2", nombre:"Perro en el auto", emoji:"🐶",
+    concepto:"Todo lo que necesitás para viajar con el perro. Nadie lo vende junto.",
+    publico:"Dueños que se van de finde y no saben dónde poner al perro.",
+    rubros:["Mascotas","Auto"],
+    busquedas:["cinturón perro auto","funda asiento perro","bebedero viaje","rampa auto perro"],
+    productos:[] }
+];
+
 /* ---------- Nichos evaluados ---------- */
 const NICHOS = [
   {
