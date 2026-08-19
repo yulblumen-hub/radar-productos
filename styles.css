@@ -964,3 +964,33 @@ code{font-family:var(--mono)}
 .prov-contacto{display:flex;gap:10px;flex-wrap:wrap;margin-top:3px}
 .prov-contacto a{font-size:11.5px;font-weight:600}
 .prov-contacto.sin{font-size:11px;color:var(--tx3);font-style:italic}
+
+/* conmutador Argentina / China */
+.conmuta{display:inline-flex;background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:2px;gap:2px;flex:none}
+.conmuta button{
+  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+  background:none;border:0;color:var(--tx3);padding:6px 12px;border-radius:8px;transition:.14s;
+}
+.conmuta button:hover{color:var(--tx2)}
+.conmuta button.on{background:var(--acc);color:var(--onAcc)}
+@media(max-width:760px){ .conmuta button{padding:6px 9px;font-size:11.5px} }
+
+/* huecos de foto: el emoji es lo provisorio, la foto real lo reemplaza */
+.foto-slot.con-foto{background:var(--bg3);padding:0;overflow:hidden}
+.foto-slot.con-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.rank-foto{
+  width:34px;height:34px;border-radius:8px;display:grid;place-items:center;
+  background:var(--bg3);border:1px solid var(--line);font-size:15px;overflow:hidden;flex:none;
+}
+.rank-foto img{width:100%;height:100%;object-fit:cover}
+
+/* adelanto del hemisferio norte */
+.adelanto{
+  margin-top:16px;padding:13px 15px;border-radius:var(--rs);
+  background:var(--bg3);border:1px solid var(--line);border-left:3px solid var(--oro);
+}
+.adelanto-et{
+  font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;
+  color:var(--oro);display:block;margin-bottom:6px;
+}
+.adelanto p{font-size:12.5px;color:var(--tx2);margin:0 0 10px;line-height:1.5}

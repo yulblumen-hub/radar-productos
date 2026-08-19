@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v28";
+const APP_VER = "v31";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -31,7 +31,7 @@ let comentarios = {};
 let soloLectura = false;
 let yo = "";
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", temp:"mias", sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -300,6 +300,7 @@ const ofertasCache = new Map();
 
 /* Los sitios donde buscar: proveedores verificados + tiendas que espiás. */
 function sitiosDeBusqueda(){
+  /* En modo Argentina no tiene sentido consultar catálogos chinos. */
   const s = [];
   DIRECTORIO.forEach(p=>{
     if(p.tipo!=="Directorio") s.push({ url:p.url, nombre:p.n, tipo:p.tipo, zona:p.zona });
@@ -504,6 +505,86 @@ async function pintarOfertas(q){
 
     ${!r.conWorker?`<p class="hintline">Sólo se consultaron las fuentes que permiten lectura directa desde el navegador. Para consultarlas a todas, desplegá <code>worker/</code>.</p>`:""}`;
 }
+
+/* ================= FOTOS REALES =================
+   Nada de emojis donde va un producto. La foto sale del catálogo de un
+   proveedor de verdad, buscando el nombre en el worker y quedándose con la
+   primera imagen. Se guarda en el navegador para no volver a pedirla. */
+const FKEY_IMG = "radar-fotos-v1";
+let fotoIdx = {};
+try{ fotoIdx = JSON.parse(localStorage.getItem(FKEY_IMG) || "{}"); }catch(e){}
+const fotoPend = new Set();
+
+function guardarFotos(){
+  try{ localStorage.setItem(FKEY_IMG, JSON.stringify(fotoIdx)); }catch(e){}
+}
+
+/* El nombre completo casi nunca matchea: "Alfombra de lamer (lick mat)" no
+   existe así en ningún catálogo. Probamos del más específico al más general. */
+function terminosDeFoto(nombre, rubro){
+  const limpio = nombre.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  const palabras = limpio.split(" ").filter(w=>w.length>2);
+  const t = [limpio];
+  if(palabras.length > 2) t.push(palabras.slice(0,2).join(" "));
+  if(palabras.length > 1) t.push(palabras[0]);
+  if(rubro) t.push(rubro);
+  return [...new Set(t.filter(Boolean))];
+}
+
+async function buscarFoto(nombre, rubro){
+  const clave = nombre.toLowerCase().trim();
+  if(fotoIdx[clave] !== undefined) return fotoIdx[clave];
+  if(!hayCatalogo() || fotoPend.has(clave)) return null;
+  fotoPend.add(clave);
+  try{
+    const sitios = sitiosDeBusqueda().slice(0,20).map(s=>s.url).join(",");
+    for(const t of terminosDeFoto(nombre, rubro)){
+      const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(t)}&sitios=${encodeURIComponent(sitios)}&descubrir=1&v=${CACHE_BUST}`);
+      const j = await r.json();
+      const con = (j.resultados||[]).find(p=>p.img);
+      if(con){ fotoIdx[clave] = con.img; guardarFotos(); return con.img; }
+    }
+    fotoIdx[clave] = "";                     // "" = buscada y sin resultado
+    guardarFotos();
+    return "";
+  }catch(e){ return null; }
+  finally{ fotoPend.delete(clave); }
+}
+
+/* Rellena los huecos de foto en paralelo: de a una tardaba medio minuto. */
+async function completarFotos(){
+  const huecos = $$("[data-foto]").filter(el=>el.dataset.foto && !el.querySelector("img"));
+  await Promise.all(huecos.map(async el=>{
+    const nombre = el.dataset.foto;
+    const url = await buscarFoto(nombre, el.dataset.fotoRubro || "");
+    if(!url) return;
+    /* Puede haber re-render en el medio: buscamos el hueco otra vez. */
+    document.querySelectorAll(`[data-foto="${CSS.escape(nombre)}"]`).forEach(vivo=>{
+      vivo.innerHTML = `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.remove()">`;
+      vivo.classList.add("con-foto");
+    });
+  }));
+}
+
+/* ================= ORIGEN: ARGENTINA O CHINA =================
+   Es un modo, no un filtro más: cambia qué proveedores se ofrecen en toda la
+   app. Arrancar comprando en Argentina y recién importar cuando el volumen lo
+   justifique es el orden que tiene sentido, así que Argentina es lo primero. */
+const OKEY = "radar-origen-v1";
+let origenModo = "arg";           // "arg" | "china"
+
+function cargarOrigen(){
+  try{ origenModo = localStorage.getItem(OKEY) || "arg"; }catch(e){}
+}
+function ponerOrigen(m){
+  origenModo = m;
+  try{ localStorage.setItem(OKEY, m); }catch(e){}
+  ofertasCache.clear();
+  render();
+  if(state.qGlobal && state.qGlobal.trim().length>=2) pintarOfertas(state.qGlobal);
+  toast(m==="arg" ? "Comprando en Argentina" : "Importando de China");
+}
+const esArg = () => origenModo === "arg";
 
 /* ================= FAVORITOS ================= */
 const esFav = (tipo, id) => (favoritos[tipo]||[]).includes(id);
@@ -813,6 +894,8 @@ function irDiapo(i){
   const d = diapos()[i];
   if(d && d.ir) d.ir();
 }
+function verTemp(t){ state.temp=t; render(); }
+
 function verMacro(cat){
   state.view="rubros"; state.fMacro=cat; state.qRubro=""; render();
 }
@@ -868,21 +951,52 @@ function vDashboard(){
 
   <div class="grid2">
     <div class="card">
-      <div class="section-h"><h2>Top categorías</h2><span class="hint">por score promedio</span></div>
-      ${rows.length? rows.map(r=>`
+      <div class="section-h"><h2>Top categorías</h2>
+        <span class="hint">${state.temp==="mias" ? "por score de tus productos" : `rubros de ${state.temp}`}</span></div>
+
+      <div class="segmented wrap" style="margin-bottom:12px">
+        <button class="${state.temp==="mias"?"on":""}" onclick="verTemp('mias')">Tus productos</button>
+        ${TEMPORADAS.map(t=>`<button class="${state.temp===t?"on":""}" onclick="verTemp('${t}')">${
+          t===temporadaSur()?"● ":""}${t}</button>`).join("")}
+      </div>
+
+      ${state.temp==="mias" ? (rows.length? rows.map(r=>`
         <div class="bar-row">
           <div class="nm">${esc(r.r)}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${(r.n/maxN)*100}%;background:${scoreColor(r.avg)}"></div></div>
           <div class="bar-val">${r.n} · <b style="color:${scoreColor(r.avg)}">${r.avg}</b></div>
-        </div>`).join("") : `<p class="empty">Sin datos todavía</p>`}
-      <p class="hintline" style="margin-top:12px">La barra es cantidad de productos; el número en color es el score promedio del rubro.</p>
+        </div>`).join("") : `<p class="empty">Cargá productos y acá vas a ver tus rubros.</p>`)
+      : (()=>{
+          const rs = RUBROS_META.filter(r=>r.temp===state.temp)
+            .sort((a,b)=>oportunidad(b.n)-oportunidad(a.n)).slice(0,8);
+          const mx = Math.max(...rs.map(r=>oportunidad(r.n)), 1);
+          return rs.map(r=>{
+            const op=oportunidad(r.n);
+            return `<div class="bar-row" style="cursor:pointer" onclick="irARubro('${esc(r.n).replace(/'/g,"\\'")}')">
+              <div class="nm">${esc(r.n)}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${(op/mx)*100}%;background:${colorMargen(r.margen)}"></div></div>
+              <div class="bar-val">${r.margen}% · <b style="color:${scoreColor(op)}">${op}</b></div>
+            </div>`;}).join("");
+        })()}
+
+      ${state.temp==="mias" ? `<p class="hintline" style="margin-top:12px">La barra es cantidad de productos; el número en color es el score promedio del rubro.</p>`
+        : `<p class="hintline" style="margin-top:12px">La barra es la oportunidad del rubro; a la izquierda del número está el margen típico.</p>`}
+
+      <div class="adelanto">
+        <span class="adelanto-et">🌎 Adelanto del hemisferio norte</span>
+        <p>Hoy en Argentina es <b>${temporadaSur()}</b> y en Estados Unidos <b>${temporadaNorte()}</b>.
+        Lo que allá está explotando ahora es lo que se va a vender acá en seis meses.
+        <b>El stock de ${temporadaNorte()} se compra ahora</b>, en pleno ${temporadaSur()}: llega justo y sin competencia.</p>
+        <button class="btn ghost mini" onclick="verTemp('${temporadaNorte()}')">Ver los rubros de ${temporadaNorte()} →</button>
+      </div>
     </div>
 
     <div class="card">
       <div class="section-h"><h2>Ranking de productos</h2><span class="hint">los 5 mejores</span></div>
       ${top.length? top.map((p,i)=>`
-        <div class="bar-row" style="grid-template-columns:20px 1fr 92px;cursor:pointer" onclick="openModal('${p.id}')">
+        <div class="bar-row" style="grid-template-columns:20px 34px 1fr 92px;cursor:pointer" onclick="openModal('${p.id}')">
           <div class="rank">${i+1}</div>
+          <span class="rank-foto foto-slot" data-foto="${esc(p.nombre)}" data-foto-rubro="${esc(p.rubro)}">${IC_MACRO[metaRubro(p.rubro).cat]||"📦"}</span>
           <div style="overflow:hidden"><div class="pname" style="font-size:13px">${esc(p.nombre)}</div>
             <div class="psub">${esc(p.rubro)}</div></div>
           <div>${scoreLine(score(p))}</div>
@@ -1147,8 +1261,8 @@ function vRubros(){
 /* Proveedores del rubro: búsquedas reales, no una lista inventada. */
 function panelRubro(f){
   const bs = buscadoresDe(f.n);
-  const provs = bs.filter(b=>b.clase==="nacional");
-  const impo  = bs.filter(b=>b.clase==="importar");
+  const provs = esArg() ? bs.filter(b=>b.clase==="nacional") : [];
+  const impo  = esArg() ? [] : bs.filter(b=>b.clase==="importar");
   const comp  = bs.filter(b=>b.clase==="competencia");
   /* Sólo proveedores directos: las plataformas ya van en su propia sección. */
   const dir = PROVEEDORES.filter(p=>
@@ -1187,8 +1301,8 @@ function panelRubro(f){
 
   return `
   <div class="rubro-panel">
-    <div class="panel-h">🏢 Proveedores reales <span class="hint">${dirRubro.length} verificados para ${esc(f.cat)} · los abrí uno por uno</span></div>
-    ${dirRubro.length ? dirRubro.map(filaDir).join("")
+    ${esArg()?`<div class="panel-h">🏢 Proveedores reales <span class="hint">${dirRubro.length} verificados para ${esc(f.cat)} · los abrí uno por uno</span></div>`:""}
+    ${!esArg() ? "" : dirRubro.length ? dirRubro.map(filaDir).join("")
       : `<p class="hintline">Todavía no relevé proveedores de <b>${esc(f.cat)}</b>. Usá las búsquedas de abajo y sumá los que encuentres con el +.</p>`}
     <div class="rubro-pie" style="margin:8px 0 0;padding-top:8px">
       <button class="btn ghost mini" onclick="formProveedor('${esc(f.n).replace(/'/g,"\\'")}')">+ Agregar un proveedor que conozcas</button>
@@ -1217,7 +1331,7 @@ function panelRubro(f){
         <a class="btn ghost mini" href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
         ${p.whatsapp?`<a class="accbtn wa" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">${ICO.wa}</a>`:""}
       </div>`).join("")}`:""}
-    <div class="panel-h">🇨🇳 Importar directo <span class="hint">recién cuando el volumen lo justifique · término: <code>${esc(f.term||f.n)}</code></span></div>
+    ${esArg()?"":`<div class="panel-h">🇨🇳 Importar directo <span class="hint">término: <code>${esc(f.term||f.n)}</code></span></div>`}
     ${impo.map(fila).join("")}
     <div class="rubro-pie">
       <button class="btn ghost mini" onclick="abrirRubro(null)">Cerrar</button>
@@ -1744,6 +1858,10 @@ function render(){
   $$(".snav[data-view]").forEach(t=>t.classList.toggle("active", t.dataset.view===state.view));
   ["btnNuevo"].forEach(id=>{ const b=$("#"+id); if(b) b.hidden = soloLectura; });
   const cf=$("#cuentaFav"); if(cf) cf.textContent = totalFav() || "";
+  const co=$("#conmutaOrigen");
+  if(co) co.innerHTML = `
+    <button class="${esArg()?"on":""}" onclick="ponerOrigen('arg')" title="Proveedores argentinos: sin aduana y con factura">🇦🇷 Argentina</button>
+    <button class="${esArg()?"":"on"}" onclick="ponerOrigen('china')" title="Importar directo: más margen, pero capital y 90 días">🇨🇳 China</button>`;
   const vp=$("#verPie");    if(vp) vp.textContent = APP_VER;
   const v = state.view;
   /* Si una vista falla, se muestra el error en su lugar: una excepción no puede
@@ -1802,6 +1920,7 @@ function render(){
       const b=$("#btnHeroBuscar"); if(b) b.onclick = ()=>lanzar(true);
     }
     arrancarRota();
+    completarFotos();
   }
   if(v==="cotizaciones"){
     const q=$("#qCot");
@@ -1873,7 +1992,7 @@ function mejorProvHTML(e){
            : `<button class="btn ghost mini" id="usarMejor">Usar este</button>`}
     </div>`;
   }
-  const p = fuente(e.rubro, "nacional");
+  const p = fuente(e.rubro, esArg() ? "nacional" : "importar");
   return `<div class="mejorprov vacio">
     <div><span class="hintline">Todavía no guardaste proveedores de este rubro, así que no puedo elegir el mejor.</span>
       <div style="margin-top:5px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Buscar “${esc(p.term)}” en ${esc(p.n)} ↗</a></div></div>
@@ -2230,7 +2349,7 @@ function randomIdea(){
 function recoHTML(c){
   const est   = aEstrellas(c.score);
   const m     = metaRubro(c.rubro);
-  const prov  = fuente(c.rubro, "nacional");
+  const prov  = fuente(c.rubro, esArg() ? "nacional" : "importar");
   const compe = fuente(c.rubro, "competencia");
   const mio   = mejorProveedor(c.rubro);
   const yaEsta= state.productos.some(p=>p.nombre.toLowerCase()===c.p.toLowerCase());
