@@ -237,7 +237,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
 
-    if (url.pathname === "/health") return json({ ok: true, version: 4, lee: ["Shopify","WooCommerce","TiendaNube"], descubre: true });
+    if (url.pathname === "/health") return json({ ok: true, version: 5, lee: ["Shopify","WooCommerce","TiendaNube"], descubre: true });
 
     /* Un catálogo suelto */
     if (url.pathname === "/catalogo") {
@@ -290,27 +290,41 @@ export default {
       let items = tandas.flatMap((t) => t.items);
       let descubiertos = [];
 
-      /* Si la lista propia trae poco, salimos a buscar afuera. */
-      if (url.searchParams.get("descubrir") === "1" && items.length < 12) {
+      /* El objetivo es ENCONTRAR PROVEEDORES, no sólo productos: salimos
+         siempre, y devolvemos todo el que parezca mayorista aunque su
+         catálogo no se pueda leer. Si no se puede leer, va igual con su
+         contacto para que lo llames. */
+      if (url.searchParams.get("descubrir") === "1") {
         const conocidos = new Set(sitios);
-        const candidatos = (await buscarEnLaRed(q)).filter((b) => !conocidos.has(b));
+        const candidatos = (await buscarEnLaRed(q, 12)).filter((b) => !conocidos.has(b));
         const probados = await Promise.all(
           candidatos.map(async (base) => {
-            const prods = await leerCatalogo(base, q);
-            if (!prods || !prods.length) return null;
-            const suyos = prods
+            const [prods, contacto] = await Promise.all([
+              leerCatalogo(base, q),
+              contactoDe(base),
+            ]);
+            const suyos = (prods || [])
               .map((p) => ({ ...p, base, punta: puntuar(p.titulo, q), nuevo: true }))
               .filter((p) => p.punta > 0);
-            if (!suyos.length) return null;
-            const contacto = await contactoDe(base);
-            return { base, items: suyos, catalogo: prods.length, contacto };
+            /* Sin contacto ni catálogo no aporta nada: lo dejamos afuera. */
+            if (!suyos.length && !contacto) return null;
+            return {
+              base,
+              items: suyos,
+              catalogo: prods ? prods.length : 0,
+              legible: !!(prods && prods.length),
+              contacto,
+            };
           })
         );
         probados.filter(Boolean).forEach((r) => {
           items = items.concat(r.items);
           descubiertos.push({
-            base: r.base, productos: r.catalogo,
-            coincidencias: r.items.length, contacto: r.contacto,
+            base: r.base,
+            productos: r.catalogo,
+            coincidencias: r.items.length,
+            legible: r.legible,
+            contacto: r.contacto,
           });
         });
       }

@@ -1170,3 +1170,5 @@ code{font-family:var(--mono)}
 .of-cab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .of-cab h3{font-size:17px}
 .of-cab .btn{margin-left:auto}
+.prov-row.real.opaco{border-left-color:var(--tx3);opacity:.85}
+.prov-row.real.opaco .prov-meta{font-style:italic}

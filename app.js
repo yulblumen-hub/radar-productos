@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v40";
+const APP_VER = "v41";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -10,7 +10,7 @@ const CKEY = "radar-cotizaciones-v1";
 const NKEY = "radar-mis-nichos-v1";
 const MKEY = "radar-sitios-mudos-v1";
 /* Subir esto invalida el cache del worker cuando cambia la lógica de búsqueda. */
-const CACHE_BUST = 4;
+const CACHE_BUST = 5;
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -506,7 +506,7 @@ async function pintarOfertas(q){
         <div class="of-tit-grupo">🏢 Proveedores <span>${r.proveedores.length} · a estos les comprás</span></div>
         <div class="of-grilla">${r.proveedores.slice(0,18).map(ofertaHTML).join("")}</div>
       </div>`
-    : `<div class="of-sinprov">
+    : (r.descubiertos && r.descubiertos.length) ? "" : `<div class="of-sinprov">
         <b>Ningún proveedor de tu lista tiene esto.</b>
         <p>De ${r.consultados} fuentes consultadas, ninguna lo vende. No quiere decir que no exista: quiere decir que todavía no tenés al proveedor.</p>
         ${fuentesAR.length?`<div class="of-sinprov-acc">
@@ -519,23 +519,31 @@ async function pintarOfertas(q){
 
     ${r.descubiertos && r.descubiertos.length ? `
       <div class="of-grupo hallados">
-        <div class="of-tit-grupo">✨ Proveedores nuevos encontrados en la red <span>no estaban en tu lista</span></div>
+        <div class="of-tit-grupo">✨ Proveedores nuevos <span>${r.descubiertos.length} encontrados en la red · no estaban en tu lista</span></div>
         ${r.descubiertos.map(d=>{
           const host=d.base.replace(/^https?:\/\//,"").replace(/^www\./,"");
           const c=d.contacto||{};
-          return `<div class="prov-row real">
-            <div class="prov-id"><b>${esc(host)}</b>
-              <span class="prov-meta">${d.productos} productos · ${d.coincidencias} coinciden</span>
-              ${(c.whatsapp||c.mail||c.instagram)?`<span class="prov-contacto">
-                ${c.whatsapp?`<a href="https://wa.me/${esc(c.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
-                ${c.mail?`<a href="mailto:${esc(c.mail)}">${esc(c.mail)}</a>`:""}
-                ${c.instagram?`<a href="https://instagram.com/${esc(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`:""}
-              </span>`:""}
+          const vias=[];
+          if(c.whatsapp) vias.push(`<a href="https://wa.me/${esc(c.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`);
+          if(c.tel && !c.whatsapp) vias.push(`<a href="tel:${esc(c.tel)}">${esc(c.tel)}</a>`);
+          if(c.mail) vias.push(`<a href="mailto:${esc(c.mail)}">${esc(c.mail)}</a>`);
+          if(c.instagram) vias.push(`<a href="https://instagram.com/${esc(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`);
+          return `<div class="prov-row real ${d.legible?"":"opaco"}">
+            <div class="prov-id">
+              <b>${esc(host)}</b>
+              <span class="prov-meta">${d.legible
+                ? `${d.productos} productos en catálogo · ${d.coincidencias} coinciden`
+                : `catálogo no legible — entrá y mirá vos`}</span>
+              ${vias.length?`<span class="prov-contacto">${vias.join("")}</span>`
+                           :`<span class="prov-contacto sin">sin contacto en la portada</span>`}
             </div>
             <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
+            ${c.whatsapp?`<button class="accbtn" title="Pedirle cotización"
+              onclick='formCotiz(${JSON.stringify({proveedor:host, producto:q, contacto:"wa:"+c.whatsapp}).replace(/'/g,"&#39;")})'>◍</button>`:""}
             <button class="accbtn" title="Sumarlo a mis proveedores"
               onclick='sumarProveedor(${JSON.stringify({n:"",pais:"Argentina",clase:"Descubierto",url:d.base,rubro:"",whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
           </div>`;}).join("")}
+        <p class="hintline">Los opacos no publican su catálogo online. Igual son proveedores: entrás, mirás y les escribís.</p>
       </div>` : ""}
 
     ${r.competencia.length ? `
