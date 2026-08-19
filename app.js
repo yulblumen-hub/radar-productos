@@ -1,12 +1,15 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v23";
+const APP_VER = "v25";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
 const FKEY = "radar-favoritos-v1";
 const CKEY = "radar-cotizaciones-v1";
+const MKEY = "radar-sitios-mudos-v1";
+/* Subir esto invalida el cache del worker cuando cambia la lógica de búsqueda. */
+const CACHE_BUST = 2;
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -331,14 +334,33 @@ async function buscarOfertas(q){
     let items = [], consultados = 0, respondieron = 0;
 
     if(hayCatalogo()){
-      const urls = sitios.map(s=>s.url).join(",");
-      try{
-        const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(q)}&sitios=${encodeURIComponent(urls)}`);
-        const j = await r.json();
-        items = j.resultados || [];
-        consultados = j.consultados || 0;
-        respondieron = j.respondieron || 0;
-      }catch(e){ /* seguimos con lo que se pueda leer directo */ }
+      /* El worker atiende 20 sitios por consulta y son 35, así que va en tandas.
+         Los que ya fallaron van últimos: no tiene sentido gastarles turno. */
+      const fallados = new Set(JSON.parse(localStorage.getItem(MKEY) || "[]"));
+      const ordenados = [...sitios].sort((x,y)=>
+        (fallados.has(raizDe(x.url))?1:0) - (fallados.has(raizDe(y.url))?1:0) ||
+        (x.competencia?1:0) - (y.competencia?1:0)
+      );
+      const tandas = [];
+      for(let i=0;i<ordenados.length;i+=20) tandas.push(ordenados.slice(i,i+20));
+
+      const nuevosFallos = new Set(fallados);
+      const respuestas = await Promise.all(tandas.map(async t=>{
+        const urls = t.map(s=>s.url).join(",");
+        try{
+          const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(q)}&sitios=${encodeURIComponent(urls)}&v=${CACHE_BUST}`);
+          return await r.json();
+        }catch(e){ return null; }
+      }));
+
+      respuestas.forEach(j=>{
+        if(!j) return;
+        items = items.concat(j.resultados || []);
+        consultados += j.consultados || 0;
+        respondieron += j.respondieron || 0;
+        (j.fallaron || []).forEach(u=>nuevosFallos.add(raizDe(u)));
+      });
+      try{ localStorage.setItem(MKEY, JSON.stringify([...nuevosFallos])); }catch(e){}
     }
 
     if(!items.length){
@@ -403,7 +425,7 @@ function ofertaHTML(p, i){
       </div>
     </div>
     <div class="of-precio">
-      <b>${p.precio?pesos(p.precio):"consultar"}</b>
+      <b>${p.precio?pesos(p.precio):`<span class="of-consultar">precio a pedido</span>`}</b>
       ${off?`<span class="off">${off}% off</span>`:""}
     </div>
     <a class="btn primary mini" href="${esc(p.link)}" target="_blank" rel="noopener">Ver ↗</a>

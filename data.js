@@ -205,7 +205,7 @@ const API_MERCADO = "";
 
 /* Proxy de catálogos (carpeta worker/). Sin esto sólo se pueden leer las
    tiendas Shopify, que son las únicas que mandan CORS. */
-const API_CATALOGO = "";
+const API_CATALOGO = "https://radar-catalogos.yulblumen.workers.dev";
 
 /* Confiabilidad para ordenar resultados: primero el que fabrica, después el que
    importa, después el que revende. Es lo que define quién te da mejor precio y
