@@ -20,7 +20,22 @@ Lee tres plataformas:
 | WooCommerce | Store API (`/wp-json/wc/store/v1/products`) | no |
 | Tienda Nube | buscador HTML | no |
 
-## Desplegarlo (5 minutos, sin cuentas de terceros)
+## Deploy automático desde GitHub (hacelo una vez y listo)
+
+Conectando el worker al repo, cada `git push` lo actualiza solo y no hay que volver
+a copiar código nunca más.
+
+En **dash.cloudflare.com** → tu worker `radar-catalogos` → **Settings** → **Build** →
+**Connect GitHub**:
+
+- Repositorio: `yulblumen-hub/radar-productos`
+- Rama: `main`
+- **Root directory**: `worker`  ← importante, si no no encuentra el `wrangler.toml`
+- Deploy command: `npx wrangler deploy`
+
+Desde ahí, cada push publica la versión nueva.
+
+## Desplegarlo a mano (la primera vez, o si no querés conectar GitHub)
 
 Todo desde el navegador, en **dash.cloudflare.com**:
 

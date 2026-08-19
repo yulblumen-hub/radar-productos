@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v26";
+const APP_VER = "v27";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -9,7 +9,7 @@ const FKEY = "radar-favoritos-v1";
 const CKEY = "radar-cotizaciones-v1";
 const MKEY = "radar-sitios-mudos-v1";
 /* Subir esto invalida el cache del worker cuando cambia la lógica de búsqueda. */
-const CACHE_BUST = 2;
+const CACHE_BUST = 3;
 const SKEY = "radar-settings-v1";
 const $  = (s,c=document)=>c.querySelector(s);
 const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
@@ -77,7 +77,8 @@ function formProveedor(rubro){
   sumarProveedor({ n:n.trim(), pais:"Argentina", clase:"Propio", url:url.trim(), rubro });
 }
 
-function sumarProveedor(p){
+function sumarProveedor(p, nombreSugerido){
+  if(!p.n && nombreSugerido) p.n = nombreSugerido;
   const clave = (p.n+"|"+(p.rubro||"")).toLowerCase();
   if(misProv.some(x=>(x.n+"|"+(x.rubro||"")).toLowerCase()===clave)){
     toast("Ya lo tenías en tu lista"); return;
@@ -318,7 +319,7 @@ function confiabilidad(base, sitios){
   const s = sitios.find(x=>raizDe(x.url)===raizDe(base));
   return {
     peso: s ? (PESO_TIPO[s.tipo]||50) : 30,
-    nombre: s ? s.nombre : raizDe(base).replace(/^https?:\/\//,""),
+    nombre: s ? s.nombre : raizDe(base).replace(/^https?:\/\//,"").replace(/^www\./,""),
     tipo: s ? s.tipo : "",
     competencia: !!(s && s.competencia)
   };
@@ -331,7 +332,7 @@ async function buscarOfertas(q){
 
   const sitios = sitiosDeBusqueda();
   const prom = (async ()=>{
-    let items = [], consultados = 0, respondieron = 0;
+    let items = [], consultados = 0, respondieron = 0, descubiertos = [];
 
     if(hayCatalogo()){
       /* El worker atiende 20 sitios por consulta y son 35, así que va en tandas.
@@ -348,7 +349,9 @@ async function buscarOfertas(q){
       const respuestas = await Promise.all(tandas.map(async t=>{
         const urls = t.map(s=>s.url).join(",");
         try{
-          const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(q)}&sitios=${encodeURIComponent(urls)}&v=${CACHE_BUST}`);
+          /* descubrir=1: si la lista propia trae poco, el worker sale a buscar
+             proveedores nuevos a la red y prueba cuáles se pueden leer. */
+          const r = await fetch(`${API_CATALOGO}/buscar?q=${encodeURIComponent(q)}&sitios=${encodeURIComponent(urls)}&descubrir=1&v=${CACHE_BUST}`);
           return await r.json();
         }catch(e){ return null; }
       }));
@@ -359,6 +362,9 @@ async function buscarOfertas(q){
         consultados += j.consultados || 0;
         respondieron += j.respondieron || 0;
         (j.fallaron || []).forEach(u=>nuevosFallos.add(raizDe(u)));
+        (j.descubiertos || []).forEach(d=>{
+          if(!descubiertos.some(x=>x.base===d.base)) descubiertos.push(d);
+        });
       });
       try{ localStorage.setItem(MKEY, JSON.stringify([...nuevosFallos])); }catch(e){}
     }
@@ -389,6 +395,7 @@ async function buscarOfertas(q){
       q,
       proveedores: conf.filter(p=>!p.competencia).sort(orden),
       competencia: conf.filter(p=>p.competencia).sort(orden),
+      descubiertos,
       consultados, respondieron, conWorker:hayCatalogo()
     };
   })();
@@ -421,6 +428,7 @@ function ofertaHTML(p, i){
       <a class="of-tit" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.titulo.slice(0,72))}</a>
       <div class="of-prov">
         <b>${esc(p.prov)}</b>${p.provTipo&&!p.competencia?` · ${esc(p.provTipo)}`:""}
+        ${p.nuevo?`<span class="of-nuevo">encontrado en la red</span>`:""}
         ${p.stock===false?`<span class="of-sin">sin stock</span>`:""}
       </div>
     </div>
@@ -468,6 +476,20 @@ async function pintarOfertas(q){
       <div class="of-grupo">
         <div class="of-tit-grupo">🎯 A cuánto lo venden <span>${r.competencia.length} · esto no es proveedor, es tu competencia</span></div>
         <div class="ofertas-lista">${r.competencia.slice(0,8).map(ofertaHTML).join("")}</div>
+      </div>` : ""}
+
+    ${r.descubiertos && r.descubiertos.length ? `
+      <div class="of-grupo hallados">
+        <div class="of-tit-grupo">✨ Proveedores nuevos encontrados en la red <span>no estaban en tu lista</span></div>
+        ${r.descubiertos.map(d=>{
+          const host=d.base.replace(/^https?:\/\//,"").replace(/^www\./,"");
+          return `<div class="prov-row real">
+            <div class="prov-id"><b>${esc(host)}</b>
+              <span class="prov-meta">${d.productos} productos en catálogo · ${d.coincidencias} coinciden con tu búsqueda</span></div>
+            <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
+            <button class="accbtn" title="Sumarlo a mis proveedores"
+              onclick='sumarProveedor(${JSON.stringify({n:"", pais:"Argentina", clase:"Descubierto", url:d.base, rubro:""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
+          </div>`;}).join("")}
       </div>` : ""}
 
     ${!r.conWorker?`<p class="hintline">Sólo se consultaron las fuentes que permiten lectura directa desde el navegador. Para consultarlas a todas, desplegá <code>worker/</code>.</p>`:""}`;

@@ -956,3 +956,8 @@ code{font-family:var(--mono)}
 }
 .of-tit-grupo span{font-weight:500;color:var(--tx3);letter-spacing:0}
 .of-consultar{font-family:var(--sans);font-size:11.5px;font-weight:500;color:var(--tx3)}
+.of-nuevo{
+  font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;
+  background:var(--pStar);color:var(--oro);padding:2px 6px;border-radius:20px;margin-left:6px;
+}
+.of-grupo.hallados .prov-row{border-left-color:var(--oro)}

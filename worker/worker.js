@@ -149,6 +149,34 @@ async function leerCatalogo(base, q) {
   );
 }
 
+/* ---------- descubrimiento ----------
+   Cuando la lista propia no alcanza, salimos a buscar proveedores nuevos a la
+   red. DuckDuckGo devuelve HTML sin pedir clave, así que no hace falta
+   contratar ninguna API. De los dominios que aparecen probamos cuáles tienen
+   catálogo legible: los que sirven se devuelven para sumarlos a la lista. */
+
+const RUIDO = /mercadolibre|mercadolibre|facebook|instagram|youtube|tiktok|pinterest|wikipedia|amazon|aliexpress|alibaba|google|linkedin|twitter|blogspot|wordpress\.com|olx|tiendanube\.com$|shopify\.com$/i;
+
+async function buscarEnLaRed(q, max = 8) {
+  const consulta = `${q} por mayor argentina`;
+  const html = await traer(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(consulta)}`, "text");
+  if (!html) return [];
+
+  const dominios = [];
+  const re = /uddg=([^&"]+)/g;
+  let m;
+  while ((m = re.exec(html)) && dominios.length < 40) {
+    let dir;
+    try { dir = decodeURIComponent(m[1]); } catch { continue; }
+    const base = origen(dir);
+    if (!base) continue;
+    const host = base.replace(/^https?:\/\//, "");
+    if (RUIDO.test(host)) continue;
+    if (!dominios.includes(base)) dominios.push(base);
+  }
+  return dominios.slice(0, max);
+}
+
 /* ---------- búsqueda ---------- */
 
 /* Puntaje simple y explicable: título que arranca con el término manda,
@@ -189,7 +217,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
 
-    if (url.pathname === "/health") return json({ ok: true, version: 2 });
+    if (url.pathname === "/health") return json({ ok: true, version: 3, lee: ["Shopify","WooCommerce","TiendaNube"], descubre: true });
 
     /* Un catálogo suelto */
     if (url.pathname === "/catalogo") {
@@ -232,7 +260,31 @@ export default {
         })
       );
 
-      const items = tandas.flatMap((t) => t.items).sort((a, b) => b.punta - a.punta || a.precio - b.precio);
+      let items = tandas.flatMap((t) => t.items);
+      let descubiertos = [];
+
+      /* Si la lista propia trae poco, salimos a buscar afuera. */
+      if (url.searchParams.get("descubrir") === "1" && items.length < 12) {
+        const conocidos = new Set(sitios);
+        const candidatos = (await buscarEnLaRed(q)).filter((b) => !conocidos.has(b));
+        const probados = await Promise.all(
+          candidatos.map(async (base) => {
+            const prods = await leerCatalogo(base, q);
+            if (!prods || !prods.length) return null;
+            const suyos = prods
+              .map((p) => ({ ...p, base, punta: puntuar(p.titulo, q), nuevo: true }))
+              .filter((p) => p.punta > 0);
+            if (!suyos.length) return null;
+            return { base, items: suyos, catalogo: prods.length };
+          })
+        );
+        probados.filter(Boolean).forEach((r) => {
+          items = items.concat(r.items);
+          descubiertos.push({ base: r.base, productos: r.catalogo, coincidencias: r.items.length });
+        });
+      }
+
+      items.sort((a, b) => b.punta - a.punta || a.precio - b.precio);
       const resp = json(
         {
           q,
@@ -240,6 +292,7 @@ export default {
           consultados: tandas.length,
           respondieron: tandas.filter((t) => t.ok).length,
           fallaron: tandas.filter((t) => !t.ok).map((t) => t.base),
+          descubiertos,
         },
         200,
         3600
@@ -248,6 +301,6 @@ export default {
       return resp;
     }
 
-    return json({ error: "Ruta desconocida", rutas: ["/health", "/catalogo?url=", "/buscar?q=&sitios="] }, 404);
+    return json({ error: "Ruta desconocida", rutas: ["/health", "/catalogo?url=", "/buscar?q=&sitios=&descubrir=1"] }, 404);
   },
 };
