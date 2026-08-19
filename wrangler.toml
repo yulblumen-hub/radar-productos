@@ -1,0 +1,5 @@
+# Está en la raíz a propósito: así Cloudflare lo encuentra sin configurar
+# "root directory" en el panel. El código del worker vive en worker/.
+name = "radar-catalogos"
+main = "worker/worker.js"
+compatibility_date = "2026-08-01"
