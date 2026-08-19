@@ -1097,3 +1097,38 @@ code{font-family:var(--mono)}
 .nicho-nums b{font-family:var(--mono);font-size:19px;font-weight:600;letter-spacing:-.02em}
 .nicho-nums span{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
 .nicho-acc{display:flex;gap:6px;align-items:center;margin-top:7px}
+
+/* --- ficha de producto --- */
+.ficha{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px}
+.ficha-foto{
+  width:210px;height:210px;flex:none;border-radius:var(--r);overflow:hidden;
+  background:var(--bg3);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:60px;
+}
+.ficha-foto img{width:100%;height:100%;object-fit:cover}
+.ficha-cuerpo{flex:1;min-width:270px;display:flex;flex-direction:column;gap:14px}
+.ficha-cab{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.ficha-cab h2{font-size:23px;margin-bottom:8px}
+.ficha-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ficha-score{text-align:right;flex:none}
+.ficha-score b{font-family:var(--mono);font-size:38px;font-weight:600;letter-spacing:-.03em;display:block;line-height:1}
+.ficha-score span{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
+.ficha-nums{
+  display:flex;gap:24px;flex-wrap:wrap;padding:14px 16px;
+  background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);
+}
+.ficha-nums div{display:flex;flex-direction:column}
+.ficha-nums b{font-family:var(--mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.ficha-nums span{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.ficha-acc{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:620px){ .ficha-foto{width:100%;height:200px} }
+.arranque{
+  background:var(--bg2);border:1px dashed var(--line);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:18px;
+}
+.arranque b{font-size:14px;display:block;margin-bottom:3px}
+.arranque p{font-size:13px;color:var(--tx3);margin:0;line-height:1.5}
+.prov-card.mio{border-color:var(--oro);background:linear-gradient(180deg,color-mix(in srgb,var(--oro) 6%,var(--bg2)),var(--bg2))}
+.prov-card-pie{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.prov-card-pie a{font-size:12px;font-weight:600}
+.mio-tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--oro);letter-spacing:.04em}

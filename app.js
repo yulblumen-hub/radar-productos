@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v32";
+const APP_VER = "v34";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -33,7 +33,7 @@ let comentarios = {};
 let soloLectura = false;
 let yo = "";
 
-let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", fMacroNicho:"", nichoTop:45, qGlobal:"", temp:"mias", nichoAbierto:null, sort:{k:"score",dir:-1}, editing:null };
+let state = { productos:[], view:"dashboard", q:"", fRubro:"", fVeredicto:"", fPais:"", rubroOrden:"margen", reco:null, qCot:"", fEstadoCot:"", tiendas:[], rubroAbierto:null, qRubro:"", fMacro:"", fMargen:0, qDir:"", fDirCat:"", soloMios:false, fMacroNicho:"", nichoTop:45, qGlobal:"", temp:"mias", nichoAbierto:null, prodAbierto:null, sort:{k:"score",dir:-1}, editing:null };
 
 /* ---------------- persistencia ---------------- */
 function load(){
@@ -925,20 +925,28 @@ function vDashboard(){
   const top = [...ps].sort((a,b)=>score(b)-score(a)).slice(0,5);
   const avgGlobal = ps.length ? Math.round(ps.reduce((s,p)=>s+score(p),0)/ps.length) : 0;
 
-  const provTot = DIRECTORIO.length + PROVEEDORES.filter(p=>p.pais==="Argentina").length;
+  /* La barra mide TU avance, no el inventario de la app: cuántos proveedores
+     tenga el directorio no dice nada de tu negocio. */
+  const prodNicho   = misNichos.reduce((s,n)=>s+((n.productos||[]).length),0);
+  const respondidas = cotiz.filter(c=>Number(c.precio)>0).length;
+  const arrancaste  = ps.length || misProv.length || prodNicho || totalFav();
+
   return `
   ${heroHTML()}
 
   <div id="ofertas" class="ofertas" hidden></div>
 
-  <div class="numeros">
-    <div><b>${provTot}</b><span>proveedores</span></div>
-    <div><b>${RUBROS_META.length-1}</b><span>rubros</span></div>
-    <div><b>${CALIENTES.length}</b><span>candidatos</span></div>
+  ${arrancaste ? `<div class="numeros">
     <div><b>${ps.length}</b><span>tus productos</span></div>
-    <div><b style="color:var(--acc)">${cotiz.filter(c=>Number(c.precio)>0).length}</b><span>cotizados</span></div>
-    <div><b style="color:var(--star)">${totalFav()}</b><span>favoritos</span></div>
-  </div>
+    <div><b>${misProv.length}</b><span>tus proveedores</span></div>
+    <div><b>${prodNicho}</b><span>en tus nichos</span></div>
+    <div><b style="color:${respondidas?"var(--acc)":"var(--tx3)"}">${respondidas}</b><span>cotizados</span></div>
+    <div><b style="color:${totalFav()?"var(--oro)":"var(--tx3)"}">${totalFav()}</b><span>favoritos</span></div>
+    ${ps.length?`<div><b style="color:${scoreColor(avgGlobal)}">${avgGlobal}</b><span>score prom.</span></div>`:""}
+  </div>` : `<div class="arranque">
+    <b>Todavía no guardaste nada.</b>
+    <p>Buscá un producto arriba y guardá lo que te sirva: el proveedor pasa a ser tuyo cuando lo elegís, no antes.</p>
+  </div>`}
 
   <div class="section">${calienteHTML()}</div>
 
@@ -965,7 +973,7 @@ function vDashboard(){
       </div>
 
       ${state.temp==="mias" ? (rows.length? rows.map(r=>`
-        <div class="bar-row">
+        <div class="bar-row" style="cursor:pointer" onclick="irARubro('${esc(r.r).replace(/'/g,"\\'")}')">
           <div class="nm">${esc(r.r)}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${(r.n/maxN)*100}%;background:${scoreColor(r.avg)}"></div></div>
           <div class="bar-val">${r.n} · <b style="color:${scoreColor(r.avg)}">${r.avg}</b></div>
@@ -998,7 +1006,7 @@ function vDashboard(){
     <div class="card">
       <div class="section-h"><h2>Ranking de productos</h2><span class="hint">los 5 mejores</span></div>
       ${top.length? top.map((p,i)=>`
-        <div class="bar-row" style="grid-template-columns:20px 34px 1fr 92px;cursor:pointer" onclick="openModal('${p.id}')">
+        <div class="bar-row" style="grid-template-columns:20px 34px 1fr 92px;cursor:pointer" onclick="abrirProducto('${p.id}')">
           <div class="rank">${i+1}</div>
           <span class="rank-foto foto-slot" data-foto="${esc(p.nombre)}" data-foto-rubro="${esc(p.rubro)}">${IC_MACRO[metaRubro(p.rubro).cat]||"📦"}</span>
           <div style="overflow:hidden"><div class="pname" style="font-size:13px">${esc(p.nombre)}</div>
@@ -1113,7 +1121,7 @@ function vProductos(){
     </tr></thead>
     <tbody>${ps.map(p=>{
       const m=margen(p), s=score(p);
-      return `<tr onclick="openModal('${p.id}')">
+      return `<tr onclick="abrirProducto('${p.id}')">
         <td><div class="celda-prod">
             ${fotoHTML(p)}
             <div class="celda-txt">
@@ -1365,138 +1373,72 @@ const estrellasHTML = (n, onclick) => [1,2,3,4,5].map(i=>
 const aEstrellas = s => Math.max(1, Math.min(5, Math.round(s/20)));
 
 function vProveedores(){
-  const usados={};
-  state.productos.forEach(p=>{ if(p.proveedor) usados[p.proveedor]=(usados[p.proveedor]||0)+1; });
+  /* Una sola lista. Antes estaban partidos en "verificados" y "directorio",
+     que era una división mía y no le servía a nadie. */
+  const todos = [
+    ...PROVEEDORES.filter(p=>p.tipo!=="1688" && p.tipo!=="Alibaba").map(p=>({
+      n:p.nombre, url:p.url, tipo:p.tipo, zona:p.pais, nota:p.nota,
+      whatsapp:p.whatsapp, rubros:p.rubros||[p.rubro], pais:p.pais })),
+    ...DIRECTORIO.map(p=>({ ...p, pais:"Argentina" })),
+  ];
+  const mios = new Set(misProv.map(p=>(p.url||"").replace(/\/$/,"")));
+  const q = (state.qDir||"").toLowerCase();
+  const lista = todos.filter(p=>
+    (!state.fDirCat || (p.rubros||[]).includes(state.fDirCat)) &&
+    (!state.soloMios || mios.has((p.url||"").replace(/\/$/,""))) &&
+    (!q || (p.n+" "+(p.nota||"")+" "+p.tipo+" "+p.zona+" "+(p.rubros||[]).join(" ")).toLowerCase().includes(q)));
 
-  const plataformas = PLATAFORMAS.filter(p=>p.clase==="plataforma");
-  const directos    = PROVEEDORES.filter(p=>p.tipo!=="1688" && p.tipo!=="Alibaba");
+  const cats = MACROS.filter(c=>todos.some(p=>(p.rubros||[]).includes(c)));
 
   return `
   <div class="section-h"><h2>Proveedores</h2>
     <span class="hint">preguntá siempre: «¿me hacés factura A?» y «¿cuál es el mínimo?»</span></div>
 
-  <div class="bloque">
-    <div class="bloque-h">
-      <h3>🌐 Plataformas</h3>
-      <span class="hint">No son fábricas: son buscadores de fábricas. Entrás desde el rubro con el término ya cargado.</span>
+  <div class="toolbar">
+    <input class="input" id="qDir" placeholder="Buscar proveedor…" value="${esc(state.qDir||"")}">
+    <select class="input" id="fDirCat">
+      <option value="">Todas las categorías</option>
+      ${cats.map(c=>`<option value="${esc(c)}" ${c===state.fDirCat?"selected":""}>${IC_MACRO[c]||""} ${esc(c)} (${todos.filter(p=>(p.rubros||[]).includes(c)).length})</option>`).join("")}
+    </select>
+    <div class="segmented">
+      <button class="${state.soloMios?"":"on"}" onclick="state.soloMios=false;render()">Todos ${todos.length}</button>
+      <button class="${state.soloMios?"on":""}" onclick="state.soloMios=true;render()">★ Los míos ${misProv.length}</button>
     </div>
-    <div class="cardgrid">
-    ${plataformas.map(p=>`
+  </div>
+
+  ${lista.length ? `<div class="cardgrid">${lista.map(p=>{
+    const esMio = mios.has((p.url||"").replace(/\/$/,""));
+    return `<div class="minicard prov-card ${esMio?"mio":""}">
+      <h3><span class="bandera bandera-lg">${p.pais==="Colombia"?"🇨🇴":"🇦🇷"}</span>${esc(p.n)} ${btnFav("proveedores",p.n)}</h3>
+      <div class="meta">${esc(p.tipo)} · ${esc(p.zona)}</div>
+      <p>${esc(p.nota||"")}</p>
+      <p style="margin-top:8px">${(p.rubros||[]).slice(0,3).map(r=>`<span class="tag">${IC_MACRO[r]||""} ${esc(r)}</span>`).join("")}</p>
+      <div class="prov-card-pie">
+        <a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir ↗</a>
+        ${p.whatsapp?`<a href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
+        <button class="btn ghost mini" onclick='sumarProveedor(${JSON.stringify({n:"",pais:"Argentina",clase:"",url:"",rubro:""}).replace(/'/g,"&#39;")})' hidden></button>
+        ${esMio
+          ? `<span class="mio-tag">★ tuyo</span>`
+          : `<button class="btn ghost mini" onclick='sumarProveedor(${JSON.stringify({n:p.n,pais:p.pais,clase:p.tipo,url:p.url,rubro:(p.rubros||[])[0]||"",whatsapp:p.whatsapp||""}).replace(/'/g,"&#39;")})'>+ Es mío</button>`}
+      </div>
+    </div>`;}).join("")}</div>`
+  : `<div class="empty">${state.soloMios
+      ? `<div class="big">★</div>Todavía no marcaste ninguno como tuyo.<br><span class="hintline">Tocá «+ Es mío» en el que te sirva.</span>`
+      : "Ninguno con ese filtro."}</div>`}
+
+  <div class="bloque" style="margin-top:22px">
+    <div class="bloque-h">
+      <h3>🌐 Plataformas para importar</h3>
+      <span class="hint">no son fábricas: son buscadores de fábricas</span>
+    </div>
+    <div class="cardgrid">${PLATAFORMAS.filter(p=>p.clase==="plataforma").map(p=>`
       <div class="minicard">
-        <h3><span class="bandera bandera-lg">${bandera(p.pais)}</span>${esc(p.n)}</h3>
-        <div class="meta">${esc(p.pais)} · mín. ${esc(p.minimo)} · ${esc(p.idioma)}</div>
+        <h3><span class="bandera bandera-lg">🇨🇳</span>${esc(p.n)}</h3>
+        <div class="meta">mín. ${esc(p.minimo)} · ${esc(p.idioma)}</div>
         <p>${esc(p.nota)}</p>
-      </div>`).join("")}
-    </div>
-    <p class="hintline" style="margin-top:10px">Para buscar en una: andá a <b>Rubros</b>, abrí el rubro y usá los links — llevan el término correcto (en chino donde corresponde).</p>
-  </div>
-
-  <div class="bloque">
-    <div class="bloque-h">
-      <h3>🏭 Proveedores directos verificados</h3>
-      <span class="hint">Los abrí y confirmé uno por uno. El resto lo tenés que verificar vos.</span>
-    </div>
-    <div class="cardgrid">
-    ${directos.map(v=>`
-      <div class="minicard">
-        <h3><span class="bandera bandera-lg">${bandera(v.pais)}</span>${esc(v.nombre)}</h3>
-        <div class="meta">${esc(v.tipo)} · <b style="color:${v.pais==="Argentina"?"var(--acc)":"var(--warn)"}">${esc(v.pais)}</b>${usados[v.nombre]?` · <b style="color:var(--acc)">${usados[v.nombre]} producto${usados[v.nombre]===1?"":"s"}</b>`:""}</div>
-        <p>${esc(v.nota)}</p>
-        <p style="margin-top:9px">
-          <a href="${esc(v.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a>
-          ${v.whatsapp?` · <a href="https://wa.me/${waNumero(v.whatsapp)}" target="_blank" rel="noopener">WhatsApp ↗</a>`:""}
-        </p>
-      </div>`).join("")}
-    </div>
-  </div>
-
-  <div class="bloque">
-    <div class="bloque-h">
-      <h3>🏢 Directorio argentino</h3>
-      <span class="hint">${DIRECTORIO.length} relevados y verificados · filtrá por categoría</span>
-    </div>
-    <div class="toolbar">
-      <input class="input" id="qDir" placeholder="Buscar proveedor…" value="${esc(state.qDir||"")}">
-      <select class="input" id="fDirCat">
-        <option value="">Todas las categorías</option>
-        ${MACROS.filter(c=>DIRECTORIO.some(p=>p.rubros.includes(c))).map(c=>
-          `<option value="${esc(c)}" ${c===state.fDirCat?"selected":""}>${IC_MACRO[c]||""} ${esc(c)} (${DIRECTORIO.filter(p=>p.rubros.includes(c)).length})</option>`).join("")}
-      </select>
-    </div>
-    ${(()=>{
-      const q=(state.qDir||"").toLowerCase();
-      const lista = DIRECTORIO.filter(p=>
-        (!state.fDirCat || p.rubros.includes(state.fDirCat)) &&
-        (!q || (p.n+" "+p.nota+" "+p.tipo+" "+p.zona+" "+p.rubros.join(" ")).toLowerCase().includes(q)));
-      if(!lista.length) return `<div class="empty">Ninguno con ese filtro.</div>`;
-      return `<div class="cardgrid">${lista.map(p=>`
-        <div class="minicard">
-          <h3><span class="bandera bandera-lg">🇦🇷</span>${esc(p.n)}</h3>
-          <div class="meta">${esc(p.tipo)} · ${esc(p.zona)}</div>
-          <p>${esc(p.nota)}</p>
-          <p style="margin-top:8px">${p.rubros.map(r=>`<span class="tag">${IC_MACRO[r]||""} ${esc(r)}</span>`).join("")}</p>
-          <p style="margin-top:9px"><a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir sitio ↗</a></p>
-        </div>`).join("")}</div>`;
-    })()}
-  </div>
-
-  <div class="bloque">
-    <div class="bloque-h">
-      <h3>⭐ Mis proveedores</h3>
-      <span class="hint">${misProv.length} guardado${misProv.length===1?"":"s"} · calificalos cuando cotices y el mejor se propone solo en el producto</span>
-    </div>
-    ${misProv.length ? `
-    <div class="tablewrap"><table>
-      <thead><tr>
-        <th>Proveedor</th><th>Rubro</th><th>Calificación</th>
-        <th class="num">Precio US$</th><th>Reseñas</th><th>Ventas</th><th></th>
-      </tr></thead>
-      <tbody>${misProv.map(p=>`
-        <tr>
-          <td><div class="pname">${p.url?`<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.n)} <span class="flecha">↗</span></a>`:esc(p.n)}</div>
-              <div class="psub"><span class="pais"><span class="bandera">${bandera(p.pais)}</span>${esc(p.pais)}</span> · ${esc(p.clase)}</div></td>
-          <td style="color:var(--tx2)">${esc(p.rubro||"—")}</td>
-          <td class="estrellas">${estrellasHTML(p.rating, `puntuarProv_${p.id}`)}</td>
-          <td class="num"><input class="input mini" type="number" step="0.01" value="${esc(p.precio)}"
-                onchange="campoProveedor('${p.id}','precio',this.value)"></td>
-          <td><input class="input mini" value="${esc(p.resenas)}" placeholder="4.8 / 300"
-                onchange="campoProveedor('${p.id}','resenas',this.value)"></td>
-          <td><input class="input mini" value="${esc(p.ventas)}" placeholder="500+/mes"
-                onchange="campoProveedor('${p.id}','ventas',this.value)"></td>
-          <td><button class="accbtn del" onclick="borrarProveedor('${p.id}')">${ICO.tacho}</button></td>
-        </tr>`).join("")}</tbody>
-    </table></div>
-    <p class="hintline" style="margin-top:10px">La calificación y las reseñas las cargás vos con lo que veas al cotizar — no me los invento. El producto propone el de mejor calificación y, a igual nota, el más barato.</p>
-    ` : `<div class="empty"><div class="big">⭐</div>Todavía no sumaste ninguno.<br>
-         Andá a <b>Rubros</b>, abrí uno y tocá <b>+</b> en el proveedor que te sirva.</div>`}
+      </div>`).join("")}</div>
+    <p class="hintline" style="margin-top:10px">Para buscar en una: andá a <b>Rubros</b>, abrí el rubro y usá los links — llevan el término correcto en chino.</p>
   </div>`;
-}
-
-const COLOR_MACRO = {};
-MACROS.forEach(c=>COLOR_MACRO[c]=tono(c));
-
-/* Empaquetado en espiral, determinista y sin librerías.
-   La colisión se calcula en espacio circular puro: mezclar el achatado con
-   el circular era lo que hacía que algunas burbujas se pisaran. */
-function empaquetar(items, ancho, alto){
-  const GAP=4, puestos=[];
-  const cx=ancho/2, cy=alto/2;
-  items.forEach((it,idx)=>{
-    const r=it.r;
-    if(idx===0){ puestos.push({...it,x:cx,y:cy}); return; }
-    let ang=0, rad=r+items[0].r+GAP, x=cx, y=cy, chocado=true, iter=0;
-    while(chocado && iter<20000){
-      x = cx + Math.cos(ang)*rad;
-      y = cy + Math.sin(ang)*rad;
-      chocado = x-r<GAP || x+r>ancho-GAP || y-r<GAP || y+r>alto-GAP
-             || puestos.some(p=>Math.hypot(p.x-x, p.y-y) < p.r + r + GAP);
-      ang += Math.max(0.02, 5/rad);
-      if(ang >= Math.PI*2){ ang=0; rad+=5; }
-      iter++;
-    }
-    if(!chocado) puestos.push({...it,x,y});
-  });
-  return puestos;
 }
 
 function vNichos(){
@@ -1782,7 +1724,7 @@ function vFavoritos(){
       </div>`).join("")}</div></div>`:""}
   ${prods.length?`<div class="bloque"><div class="bloque-h"><h3>◧ Productos</h3></div>
     <div class="cardgrid">${prods.map(p=>`
-      <div class="minicard" onclick="openModal('${p.id}')" style="cursor:pointer">
+      <div class="minicard" onclick="abrirProducto('${p.id}')" style="cursor:pointer">
         <h3>${esc(p.nombre)} ${btnFav("productos",p.id)}</h3>
         <div class="meta">${esc(p.rubro)} · score ${score(p)}</div>
       </div>`).join("")}</div></div>`:""}
@@ -1827,7 +1769,7 @@ function pintarBusqueda(){
   caja.hidden=false;
   caja.innerHTML =
     grupo("Productos", r.productos, p=>`
-      <div class="rg-item" onclick="cerrarBusqueda();openModal('${p.id}')">
+      <div class="rg-item" onclick="cerrarBusqueda();abrirProducto('${p.id}')">
         ${fotoHTML(p)}<div class="rg-txt"><b>${esc(p.nombre)}</b><span>${esc(p.rubro)}</span></div>
         <span class="rg-tag">score ${score(p)}</span></div>`) +
     grupo("Rubros", r.rubros, x=>`
@@ -1854,6 +1796,114 @@ function cerrarBusqueda(){
   state.qGlobal="";
   const i=$("#qGlobal"); if(i) i.value="";
   pintarBusqueda();
+}
+
+/* ================= FICHA DE PRODUCTO ================= */
+/* El modal sirve para cargar datos, no para leerlos: queda chico y tapa todo.
+   Al tocar un producto se abre su ficha completa, con la foto grande, el
+   desglose del score, sus proveedores y el mercado. */
+
+function abrirProducto(id){ state.prodAbierto = id; state.view = "producto"; render(); window.scrollTo(0,0); }
+
+function vProducto(){
+  const p = state.productos.find(x=>x.id===state.prodAbierto);
+  if(!p) return `<div class="empty"><div class="big">◻</div>Ese producto ya no está.</div>`;
+  const m = metaRubro(p.rubro);
+  const s = score(p), mg = margen(p);
+  const cots = cotiz.filter(c=>(c.producto||"").toLowerCase()===p.nombre.toLowerCase());
+
+  return `
+  <button class="btn ghost mini" onclick="state.view='productos';render()">← Productos</button>
+
+  <div class="ficha">
+    <div class="ficha-foto foto-slot" data-foto="${esc(p.nombre)}" data-foto-rubro="${esc(p.rubro)}">
+      ${p.img?`<img src="${esc(p.img)}" alt="">`:IC_MACRO[m.cat]||"📦"}
+    </div>
+
+    <div class="ficha-cuerpo">
+      <div class="ficha-cab">
+        <div>
+          <h2>${esc(p.nombre)}</h2>
+          <div class="ficha-meta">
+            <span class="tag">${IC_MACRO[m.cat]||""} ${esc(p.rubro)}</span>
+            <span class="pill ${esc(p.veredicto||"evaluar")}">${esc(p.veredicto||"evaluar")}</span>
+            ${btnFav("productos",p.id)}
+          </div>
+        </div>
+        <div class="ficha-score">
+          <b style="color:${scoreColor(s)}">${s}</b>
+          <span>score</span>
+          ${estrellasHTML(Math.max(1,Math.round(s/20)))}
+        </div>
+      </div>
+
+      <div class="ficha-nums">
+        <div><b>${money(p.fob)}</b><span>costo</span></div>
+        <div><b>${money(costoPuesto(p))}</b><span>puesto acá${p.aplicaMult?` ×${multDe(p)}`:""}</span></div>
+        <div><b>${money(p.venta)}</b><span>venta</span></div>
+        <div><b style="color:${mg==null?"var(--tx3)":mg>=65?"var(--acc)":mg>=45?"var(--warn)":"var(--bad)"}">${mg==null?"—":mg+"%"}</b><span>margen</span></div>
+        ${p.moq?`<div><b>${esc(p.moq)}</b><span>mínimo</span></div>`:""}
+      </div>
+
+      <div class="ficha-acc">
+        <button class="btn primary" onclick="openModal('${p.id}')">Editar datos</button>
+        ${p.url?`<a class="btn ghost" href="${esc(p.url)}" target="_blank" rel="noopener">Ver el producto ↗</a>`:""}
+        ${p.provUrl?`<a class="btn ghost" href="${esc(p.provUrl)}" target="_blank" rel="noopener">Proveedor ↗</a>`:""}
+        ${p.whatsapp?`<a class="btn ghost" href="https://wa.me/${waNumero(p.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>`:""}
+        <button class="btn ghost" onclick='formCotiz(${JSON.stringify({proveedor:p.proveedor||"", producto:p.nombre, rubro:p.rubro}).replace(/'/g,"&#39;")})'>Pedir cotización</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:18px">
+    <div class="card">
+      <div class="section-h"><h2>De dónde sale el ${s}</h2><span class="hint">criterio por criterio</span></div>
+      ${CRITERIOS.map(c=>{
+        const v = Number((p.crit||{})[c.k])||0;
+        return `<div class="bar-row" style="grid-template-columns:150px 1fr 54px">
+          <div class="nm">${esc(c.n)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(v/5)*100}%;background:${scoreColor(v*20)}"></div></div>
+          <div class="bar-val">${v}/5 <span style="opacity:.5">·${c.w}</span></div>
+        </div>`;}).join("")}
+      <p class="hintline" style="margin-top:10px">El número chico es cuánto pesa ese criterio en el total.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-h"><h2>El rubro</h2>
+        <span class="hint">${esc(m.cat)} · ${esc(m.tend)}</span></div>
+      ${medidor(m.margen, colorMargen(m.margen), "Margen bruto típico")}
+      ${medidor(m.explotado, scoreColor(100-m.explotado), "Explotado")}
+      ${medidor(m.proyeccion, scoreColor(m.proyeccion), "Proyección")}
+      <p class="rubro-nota" style="margin-top:10px">${esc(m.nota)}</p>
+      <button class="btn ghost mini" style="margin-top:10px" onclick="irARubro('${esc(p.rubro).replace(/'/g,"\\'")}')">Ver proveedores del rubro →</button>
+    </div>
+  </div>
+
+  ${p.notas?`<div class="card" style="margin-top:14px">
+    <div class="section-h"><h2>Tus notas</h2></div>
+    <p style="font-size:13.5px;color:var(--tx2);white-space:pre-wrap;margin:0">${esc(p.notas)}</p>
+  </div>`:""}
+
+  ${(p.competidores||[]).length?`<div class="card" style="margin-top:14px">
+    <div class="section-h"><h2>Competidores anotados</h2></div>
+    ${p.competidores.map(c=>`<div class="prov-row">
+      <div class="prov-id"><b>${esc(c.n||"—")}</b>
+        <span class="prov-meta">${c.p?`precio ${esc(c.p)}`:""}${c.v?` · ${esc(c.v)}`:""}</span></div>
+    </div>`).join("")}
+  </div>`:""}
+
+  ${cots.length?`<div class="card" style="margin-top:14px">
+    <div class="section-h"><h2>Cotizaciones pedidas</h2></div>
+    ${cots.map(c=>`<div class="prov-row">
+      <div class="prov-id"><b>${esc(c.proveedor)}</b>
+        <span class="prov-meta">${esc(c.estado)}${c.precio?` · US$ ${esc(c.precio)}`:""}${c.minimo?` · mín ${esc(c.minimo)}`:""}</span></div>
+    </div>`).join("")}
+  </div>`:""}
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-h"><h2>El mercado hoy</h2></div>
+    <div id="mkFicha">${hayCatalogo()?`<p class="hintline">Consultando…</p>`:`<p class="hintline">Conectá el proxy de catálogos para ver precios reales.</p>`}</div>
+  </div>`;
 }
 
 /* ================= MIS NICHOS ================= */
@@ -2067,6 +2117,7 @@ function render(){
     : v==="productos"   ? vProductos()
     : v==="rubros"      ? vRubros()
     : v==="cotizaciones"? vCotizaciones()
+    : v==="producto"    ? vProducto()
     : v==="misnichos"   ? vMisNichos()
     : v==="favoritos"   ? vFavoritos()
     : v==="tiendas"     ? vTiendas()
@@ -2117,6 +2168,11 @@ function render(){
     }
     arrancarRota();
     completarFotos();
+  }
+  if(v==="producto"){
+    completarFotos();
+    const p = state.productos.find(x=>x.id===state.prodAbierto);
+    if(p && hayMercado()) pintarMercado("#mkFicha", p.nombre);
   }
   if(v==="misnichos"){
     const b=$("#btnNuevoNicho"); if(b) b.onclick = crearNicho;
