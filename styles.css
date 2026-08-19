@@ -1172,3 +1172,19 @@ code{font-family:var(--mono)}
 .of-cab .btn{margin-left:auto}
 .prov-row.real.opaco{border-left-color:var(--tx3);opacity:.85}
 .prov-row.real.opaco .prov-meta{font-style:italic}
+
+/* --- proveedores hallados en la nube: el resultado principal --- */
+.hallado{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 16px;margin-bottom:8px;
+  background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--acc);
+  border-radius:var(--r);transition:.14s;
+}
+.hallado:hover{border-color:var(--acc);box-shadow:var(--sombra)}
+.hallado.mio{border-left-color:var(--oro);background:linear-gradient(90deg,color-mix(in srgb,var(--oro) 7%,var(--bg2)),var(--bg2) 40%)}
+.hallado-id{flex:1;min-width:220px;display:flex;flex-direction:column;gap:3px}
+.hallado-id b{font-size:14.5px}
+.hallado-est{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.hallado-est.ok{color:var(--acc)}
+.hallado-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:560px){ .hallado-acc{width:100%} }

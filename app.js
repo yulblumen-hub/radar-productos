@@ -1,7 +1,7 @@
 /* ============================================================
    Radar de Productos — lógica
    ============================================================ */
-const APP_VER = "v41";
+const APP_VER = "v42";
 const KEY  = "radar-productos-v1";
 const PKEY = "radar-proveedores-v1";
 const TKEY = "radar-tiendas-v1";
@@ -501,25 +501,9 @@ async function pintarOfertas(q){
       <button class="btn ghost mini" onclick="cerrarOfertas()">✕ cerrar</button>
     </div>
 
-    ${r.proveedores.length ? `
-      <div class="of-grupo">
-        <div class="of-tit-grupo">🏢 Proveedores <span>${r.proveedores.length} · a estos les comprás</span></div>
-        <div class="of-grilla">${r.proveedores.slice(0,18).map(ofertaHTML).join("")}</div>
-      </div>`
-    : (r.descubiertos && r.descubiertos.length) ? "" : `<div class="of-sinprov">
-        <b>Ningún proveedor de tu lista tiene esto.</b>
-        <p>De ${r.consultados} fuentes consultadas, ninguna lo vende. No quiere decir que no exista: quiere decir que todavía no tenés al proveedor.</p>
-        ${fuentesAR.length?`<div class="of-sinprov-acc">
-          ${fuentesAR.slice(0,4).map(f=>`<a class="btn ghost mini" href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.n)} ↗</a>`).join("")}
-        </div>`:`<div class="of-sinprov-acc">
-          <a class="btn ghost mini" href="https://www.google.com/search?q=${encodeURIComponent("mayorista "+q+" argentina")}" target="_blank" rel="noopener">Buscar mayoristas ↗</a>
-          <a class="btn ghost mini" href="https://listado.mercadolibre.com.ar/${encodeURIComponent(q.replace(/\s+/g,"-"))}-por-mayor" target="_blank" rel="noopener">ML por mayor ↗</a>
-        </div>`}
-      </div>`}
-
     ${r.descubiertos && r.descubiertos.length ? `
       <div class="of-grupo hallados">
-        <div class="of-tit-grupo">✨ Proveedores nuevos <span>${r.descubiertos.length} encontrados en la red · no estaban en tu lista</span></div>
+        <div class="of-tit-grupo">🔍 Proveedores encontrados <span>${r.descubiertos.length} en la red · sumá a tu lista los que te convenzan</span></div>
         ${r.descubiertos.map(d=>{
           const host=d.base.replace(/^https?:\/\//,"").replace(/^www\./,"");
           const c=d.contacto||{};
@@ -528,22 +512,38 @@ async function pintarOfertas(q){
           if(c.tel && !c.whatsapp) vias.push(`<a href="tel:${esc(c.tel)}">${esc(c.tel)}</a>`);
           if(c.mail) vias.push(`<a href="mailto:${esc(c.mail)}">${esc(c.mail)}</a>`);
           if(c.instagram) vias.push(`<a href="https://instagram.com/${esc(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`);
-          return `<div class="prov-row real ${d.legible?"":"opaco"}">
-            <div class="prov-id">
+          const yaEs = misProv.some(p=>raizDe(p.url||"")===raizDe(d.base));
+          return `<div class="hallado ${yaEs?"mio":""}">
+            <div class="hallado-id">
               <b>${esc(host)}</b>
-              <span class="prov-meta">${d.legible
-                ? `${d.productos} productos en catálogo · ${d.coincidencias} coinciden`
-                : `catálogo no legible — entrá y mirá vos`}</span>
+              <span class="hallado-est ${d.legible?"ok":""}">${d.legible
+                ? `✓ catálogo abierto · ${d.productos} productos`
+                : `catálogo cerrado — entrá y mirá`}</span>
               ${vias.length?`<span class="prov-contacto">${vias.join("")}</span>`
                            :`<span class="prov-contacto sin">sin contacto en la portada</span>`}
             </div>
-            <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
-            ${c.whatsapp?`<button class="accbtn" title="Pedirle cotización"
-              onclick='formCotiz(${JSON.stringify({proveedor:host, producto:q, contacto:"wa:"+c.whatsapp}).replace(/'/g,"&#39;")})'>◍</button>`:""}
-            <button class="accbtn" title="Sumarlo a mis proveedores"
-              onclick='sumarProveedor(${JSON.stringify({n:"",pais:"Argentina",clase:"Descubierto",url:d.base,rubro:"",whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+</button>
+            <div class="hallado-acc">
+              <a class="btn ghost mini" href="${esc(d.base)}" target="_blank" rel="noopener">Abrir ↗</a>
+              ${c.whatsapp?`<button class="btn ghost mini" onclick='formCotiz(${JSON.stringify({proveedor:host, producto:q, contacto:"wa:"+c.whatsapp}).replace(/'/g,"&#39;")})'>Cotizar</button>`:""}
+              ${yaEs
+                ? `<span class="mio-tag">★ ya es tuyo</span>`
+                : `<button class="btn primary mini" onclick='sumarProveedor(${JSON.stringify({n:"",pais:"Argentina",clase:"Descubierto",url:d.base,rubro:"",whatsapp:(d.contacto||{}).whatsapp||""}).replace(/'/g,"&#39;")}, "${esc(host)}")'>+ Es mío</button>`}
+            </div>
           </div>`;}).join("")}
-        <p class="hintline">Los opacos no publican su catálogo online. Igual son proveedores: entrás, mirás y les escribís.</p>
+        <p class="hintline">Los de catálogo cerrado no publican precios online — es lo normal en el mayorismo argentino. Entrás, mirás y les escribís.</p>
+      </div>` : `<div class="of-sinprov">
+        <b>No encontré proveedores para “${esc(q)}”.</b>
+        <p>Probá con una palabra más general, o buscá a mano:</p>
+        <div class="of-sinprov-acc">
+          <a class="btn ghost mini" href="https://www.google.com/search?q=${encodeURIComponent("mayorista "+q+" argentina")}" target="_blank" rel="noopener">Mayoristas en Google ↗</a>
+          <a class="btn ghost mini" href="https://listado.mercadolibre.com.ar/${encodeURIComponent(q.replace(/\s+/g,"-"))}-por-mayor" target="_blank" rel="noopener">ML por mayor ↗</a>
+        </div>
+      </div>`}
+
+    ${r.proveedores.length ? `
+      <div class="of-grupo">
+        <div class="of-tit-grupo">📦 Productos de tus proveedores <span>${r.proveedores.length} · de los que ya tenés en la lista</span></div>
+        <div class="of-grilla">${r.proveedores.slice(0,18).map(ofertaHTML).join("")}</div>
       </div>` : ""}
 
     ${r.competencia.length ? `
